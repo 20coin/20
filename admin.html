@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบหลังร้าน (Admin) - สวนอาหาร 20 เหรียญ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #f59e0b;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --border-color: #e5e7eb;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Kanit', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); }
+        
+        header { 
+            background: #1e293b; color: white; padding: 1.2rem 2rem; 
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        header h1 { font-size: 1.5rem; color: var(--primary-color); }
+        .refresh-btn { 
+            background: #3b82f6; color: white; border: none; 
+            padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 1rem;
+        }
+        .refresh-btn:hover { background: #2563eb; }
+
+        .container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+        
+        .no-orders { text-align: center; color: #64748b; font-size: 1.2rem; margin-top: 3rem; }
+
+        .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        
+        .order-card { 
+            background: var(--card-bg); border-radius: 12px; padding: 1.5rem; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-top: 4px solid var(--primary-color);
+            display: flex; flex-direction: column;
+        }
+        .order-header { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        
+        /* เพิ่มสไตล์สำหรับเบอร์โต๊ะให้เด่นๆ */
+        .order-table { font-weight: bold; font-size: 1.3rem; color: var(--primary-color); }
+        .order-time { color: #64748b; font-size: 0.9rem; text-align: right; }
+        
+        .order-items { flex: 1; list-style: none; margin-bottom: 1rem; }
+        .order-items li { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.95rem; border-bottom: 1px solid #f8fafc; }
+        
+        .order-total { font-size: 1.2rem; font-weight: bold; text-align: right; color: var(--danger-color); margin-bottom: 1rem; }
+        
+        .done-btn { 
+            width: 100%; background: var(--success-color); color: white; 
+            border: none; padding: 0.8rem; border-radius: 8px; cursor: pointer; 
+            font-size: 1rem; font-weight: 500;
+        }
+        .done-btn:hover { background: #059669; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>👨‍🍳 ครัวหลังร้าน (รายการสั่งซื้อ)</h1>
+        <button class="refresh-btn" onclick="loadOrders()">อัปเดตข้อมูล (Refresh)</button>
+    </header>
+
+    <div class="container">
+        <div id="no-orders-msg" class="no-orders">
+            ไม่มีรายการสั่งซื้อเข้ามาในขณะนี้...
+        </div>
+        
+        <div class="order-grid" id="order-grid">
+            </div>
+    </div>
+
+    <script>
+        function loadOrders() {
+            const grid = document.getElementById('order-grid');
+            const noOrdersMsg = document.getElementById('no-orders-msg');
+            
+            const orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
+
+            grid.innerHTML = '';
+
+            if (orders.length === 0) {
+                noOrdersMsg.style.display = 'block';
+            } else {
+                noOrdersMsg.style.display = 'none';
+                
+                orders.forEach((order, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'order-card';
+                    
+                    let itemsHtml = '';
+                    order.items.forEach(item => {
+                        itemsHtml += `
+                            <li>
+                                <span>${item.name} <b>x${item.quantity}</b></span>
+                                <span>${(item.price * item.quantity).toLocaleString()} ฿</span>
+                            </li>
+                        `;
+                    });
+
+                    // 📌 แก้ไขส่วนหัวการ์ดให้โชว์เบอร์โต๊ะตัวใหญ่ๆ
+                    card.innerHTML = `
+                        <div class="order-header">
+                            <div>
+                                <div class="order-table">โต๊ะ: ${order.table || '-'}</div>
+                                <div style="font-size: 0.85rem; color: #94a3b8;">รหัส: ${order.id}</div>
+                            </div>
+                            <div class="order-time">เวลา: ${order.time}</div>
+                        </div>
+                        <ul class="order-items">
+                            ${itemsHtml}
+                        </ul>
+                        <div class="order-total">
+                            รวม: ${order.total.toLocaleString()} ฿
+                        </div>
+                        <button class="done-btn" onclick="markAsDone(${index})">ทำอาหารเสร็จแล้ว</button>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+        }
+
+        function markAsDone(indexToRemove) {
+            let orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
+            orders.splice(indexToRemove, 1);
+            localStorage.setItem('restaurantOrders', JSON.stringify(orders));
+            loadOrders();
+        }
+
+        loadOrders();
+        setInterval(loadOrders, 5000);
+
+    </script>
+</body>
+</html>
