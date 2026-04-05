@@ -2,431 +2,337 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ระบบสั่งอาหาร - สวนอาหาร 20 เหรียญ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบหลังร้าน (Admin) - สวนอาหาร 20 เหรียญ</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-color: #f59e0b;
-            --primary-hover: #d97706;
-            --bg-color: #f3f4f6;
+            --bg-color: #f1f5f9;
             --card-bg: #ffffff;
             --text-main: #1f2937;
-            --text-muted: #6b7280;
             --danger-color: #ef4444;
             --success-color: #10b981;
             --border-color: #e5e7eb;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --blue-color: #3b82f6;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Kanit', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { background-color: var(--bg-color); color: var(--text-main); }
         
-        header { background: linear-gradient(135deg, #1e293b, #0f172a); color: white; padding: 1.2rem 2rem; text-align: center; box-shadow: var(--shadow-md); z-index: 10; }
-        header h1 { font-size: 1.8rem; font-weight: 600; color: var(--primary-color); letter-spacing: 0.5px; }
-
-        .container { display: flex; flex: 1; overflow: hidden; }
-
-        .sidebar { width: 260px; background: var(--card-bg); padding: 1.5rem 1rem; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.02); z-index: 5; }
-        .sidebar h2 { font-size: 1.2rem; margin-bottom: 1.5rem; color: var(--text-main); padding-left: 0.5rem; border-left: 4px solid var(--primary-color); }
-        .category-btn { display: block; width: 100%; text-align: left; padding: 0.8rem 1rem; margin-bottom: 0.5rem; background: transparent; border: 1px solid transparent; border-radius: 8px; cursor: pointer; transition: all 0.2s ease; font-size: 1rem; color: var(--text-muted); font-weight: 400; }
-        .category-btn:hover { background-color: #fef3c7; color: var(--primary-hover); }
-        .category-btn.active { background-color: var(--primary-color); color: white; font-weight: 500; box-shadow: var(--shadow-md); }
-
-        .main-content { flex: 1; padding: 2rem; overflow-y: auto; background-color: var(--bg-color); }
-        .main-content h2 { font-size: 1.6rem; margin-bottom: 1.5rem; color: var(--text-main); font-weight: 600; }
-        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.5rem; }
-
-        .category-section-title { grid-column: 1 / -1; font-size: 1.3rem; color: var(--text-main); margin-top: 1.5rem; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 2px dashed var(--border-color); font-weight: 600; }
-        .category-section-title:first-child { margin-top: 0; }
-
-        .menu-card { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--border-color); transition: transform 0.2s ease, box-shadow 0.2s ease; position: relative; overflow: hidden; }
-        .menu-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--primary-color); opacity: 0; transition: opacity 0.2s ease; }
-        .menu-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
-        .menu-card:hover::before { opacity: 1; }
-        .menu-card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500; line-height: 1.4; }
-        .menu-card .price { color: var(--danger-color); font-weight: 600; font-size: 1.3rem; margin-bottom: 1.2rem; }
-        
-        .add-btn { background-color: var(--bg-color); color: var(--primary-hover); border: 1px solid var(--primary-color); padding: 0.6rem; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.2s ease; width: 100%; font-size: 0.95rem; }
-        .add-btn:hover { background-color: var(--primary-color); color: white; }
-
-        .cart-section { width: 320px; background: var(--card-bg); padding: 1.5rem; border-left: 1px solid var(--border-color); display: flex; flex-direction: column; box-shadow: -2px 0 5px rgba(0,0,0,0.02); z-index: 5; }
-        .cart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 2px dashed var(--border-color); }
-        .cart-header h2 { font-size: 1.3rem; color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; }
-        .close-cart-btn { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
-
-        .cart-items { flex: 1; overflow-y: auto; list-style: none; margin-bottom: 1rem; padding-right: 0.5rem; }
-        .cart-items::-webkit-scrollbar { width: 5px; }
-        .cart-items::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid var(--border-color); }
-        .cart-item-info { flex: 1; padding-right: 10px; }
-        .cart-item-info strong { font-weight: 500; font-size: 0.95rem; color: var(--text-main); display: block; margin-bottom: 0.2rem;}
-        .cart-item-info small { color: var(--text-muted); font-size: 0.85rem;}
-        
-        .cart-item-actions { display: flex; align-items: center; gap: 0.5rem; background: var(--bg-color); padding: 0.2rem; border-radius: 6px; }
-        .cart-btn { background: white; border: 1px solid var(--border-color); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 4px; font-weight: 500; color: var(--text-main); transition: 0.2s; }
-        .cart-btn:hover { background: #e2e8f0; }
-        .cart-item-actions span { font-size: 0.9rem; font-weight: 500; width: 16px; text-align: center; }
-
-        .cart-total { margin-top: auto; padding-top: 1rem; border-top: 2px dashed var(--border-color); }
-        .cart-total h3 { display: flex; justify-content: space-between; font-size: 1.3rem; color: var(--text-main); margin-bottom: 1rem; font-weight: 600; }
-        .checkout-btn { width: 100%; background-color: var(--success-color); color: white; border: none; padding: 1rem; font-size: 1.1rem; font-weight: 500; border-radius: 8px; cursor: pointer; transition: 0.2s; box-shadow: var(--shadow-sm); }
-        .checkout-btn:hover:not(:disabled) { background-color: #059669; }
-        .checkout-btn:active:not(:disabled) { transform: scale(0.98); }
-        .checkout-btn:disabled { background-color: #9ca3af; cursor: not-allowed; box-shadow: none; }
-
-        .floating-cart-btn { display: none; }
-
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 1000; padding: 1rem; }
-        .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 480px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease-out forwards; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        .modal-content h2 { text-align: center; font-size: 1.5rem; margin-bottom: 1.5rem; padding-bottom: 1rem; color: var(--text-main); border-bottom: 2px dashed var(--border-color); }
-        #order-summary { overflow-y: auto; flex: 1; margin-bottom: 1.5rem; padding: 0.5rem; }
-        #order-summary::-webkit-scrollbar { width: 4px; }
-        #order-summary::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-
-        .summary-item { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid #f1f5f9; color: var(--text-main); font-size: 0.95rem; }
-        
-        .table-input-container { margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
-        .table-input-container label { font-weight: 600; color: var(--text-main); font-size: 1.1rem; white-space: nowrap; }
-        .table-input-container input { flex: 1; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1.1rem; }
-        .table-input-container input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2); }
-
-        .modal-total-box { font-size: 1.4rem; font-weight: 600; text-align: center; color: var(--danger-color); border-top: 2px dashed var(--border-color); padding-top: 1.5rem; margin-bottom: 1.5rem; }
-        .modal-actions { display: flex; justify-content: space-between; gap: 1rem; }
-        .modal-btn { flex: 1; padding: 0.8rem; border: none; border-radius: 8px; cursor: pointer; font-size: 1.05rem; font-weight: 500; transition: 0.2s; }
-        .btn-cancel { background: #fef2f2; color: var(--danger-color); border: 1px solid #fca5a5; }
-        .btn-cancel:hover { background: #fee2e2; }
-        .btn-confirm { background: var(--success-color); color: white; box-shadow: var(--shadow-sm); }
-        .btn-confirm:hover { background: #059669; }
-        .success-icon { font-size: 4rem; margin-bottom: 1rem; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-
-        @media (max-width: 768px) {
-            header { padding: 1rem; }
-            header h1 { font-size: 1.3rem; }
-            .container { flex-direction: column; }
-            
-            .sidebar { width: 100%; padding: 0.5rem 1rem; border-right: none; border-bottom: 1px solid var(--border-color); height: auto; }
-            .sidebar h2 { display: none; }
-            #category-list { display: flex; flex-direction: row; overflow-x: auto; gap: 0.5rem; padding-bottom: 0.5rem; }
-            #category-list::-webkit-scrollbar { height: 3px; }
-            #category-list::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 10px; }
-            .category-btn { margin-bottom: 0; white-space: nowrap; width: auto; flex: 0 0 auto; padding: 0.5rem 1rem; font-size: 0.9rem; }
-            
-            .main-content { padding: 1rem; flex: 1; }
-            .main-content h2 { font-size: 1.3rem; margin-bottom: 1rem; }
-            .menu-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.8rem; }
-            .category-section-title { font-size: 1.1rem; margin-top: 1rem; }
-            .menu-card { padding: 1rem; }
-            .menu-card h3 { font-size: 0.95rem; }
-            .menu-card .price { font-size: 1.1rem; margin-bottom: 0.8rem; }
-            .add-btn { font-size: 0.85rem; padding: 0.4rem; }
-            
-            .floating-cart-btn { display: flex; justify-content: center; align-items: center; position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: var(--primary-color); color: white; border-radius: 50%; font-size: 1.5rem; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4); border: none; z-index: 90; cursor: pointer; transition: transform 0.2s; }
-            .floating-cart-btn:active { transform: scale(0.9); }
-            .cart-badge { position: absolute; top: -5px; right: -5px; background-color: var(--danger-color); color: white; font-size: 0.85rem; font-weight: bold; width: 24px; height: 24px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 2px solid white; }
-
-            .cart-section { position: fixed; bottom: -100%; left: 0; width: 100%; height: 80vh; border-left: none; border-radius: 20px 20px 0 0; padding: 1.5rem; z-index: 95; box-shadow: 0 -10px 20px rgba(0,0,0,0.15); transition: bottom 0.3s ease-in-out; }
-            .cart-section.open { bottom: 0; }
-            .close-cart-btn { display: block; }
-            
-            .modal-content { padding: 1.5rem 1rem; width: 95%; }
-            .modal-total-box { font-size: 1.2rem; padding-top: 1rem; margin-bottom: 1rem; }
+        header { 
+            background: #1e293b; color: white; padding: 1.2rem 2rem; 
+            display: flex; justify-content: center; align-items: center; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         }
+        header h1 { font-size: 1.5rem; color: var(--primary-color); }
+
+        .container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+
+        .dashboard-container {
+            display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;
+            padding-bottom: 2rem; border-bottom: 2px dashed var(--border-color);
+        }
+        .stat-card {
+            background: var(--card-bg); padding: 1.5rem; border-radius: 12px; flex: 1; min-width: 250px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--success-color);
+        }
+        .stat-card.monthly { border-left-color: var(--blue-color); }
+        .stat-card h3 { color: #64748b; font-size: 1.1rem; margin-bottom: 0.5rem; font-weight: 500; }
+        .stat-card .amount { font-size: 2rem; font-weight: 600; color: var(--text-main); }
+        
+        .action-card {
+            display: flex; flex-direction: column; gap: 0.5rem; justify-content: center; flex: 1; min-width: 250px;
+        }
+        .btn-excel {
+            background: var(--success-color); color: white; border: none; padding: 1rem; border-radius: 8px;
+            font-size: 1.1rem; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s;
+        }
+        .btn-excel:hover { background: #059669; }
+        .btn-clear {
+            background: transparent; color: var(--danger-color); border: 1px solid var(--danger-color);
+            padding: 0.5rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; width: 100%; transition: 0.2s;
+        }
+        .btn-clear:hover { background: #fee2e2; }
+        
+        .section-title { font-size: 1.3rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .no-orders { text-align: center; color: #64748b; font-size: 1.2rem; margin-top: 3rem; background: white; padding: 2rem; border-radius: 12px; }
+
+        .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        
+        .order-card { 
+            background: var(--card-bg); border-radius: 12px; padding: 1.5rem; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-color);
+            display: flex; flex-direction: column;
+        }
+        .order-header { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        
+        .order-table { font-weight: bold; font-size: 1.3rem; color: var(--primary-color); }
+        .order-time { color: #64748b; font-size: 0.9rem; text-align: right; }
+        
+        .order-items { flex: 1; list-style: none; margin-bottom: 1rem; }
+        .order-items li { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.95rem; border-bottom: 1px solid #f8fafc; }
+        
+        .order-total { font-size: 1.2rem; font-weight: bold; text-align: right; color: var(--danger-color); margin-bottom: 1rem; }
+        
+        .done-btn { 
+            width: 100%; background: var(--success-color); color: white; 
+            border: none; padding: 0.8rem; border-radius: 8px; cursor: pointer; 
+            font-size: 1rem; font-weight: 500; transition: 0.2s;
+        }
+        .done-btn:hover { background: #059669; }
+
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);
+            justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
+        }
+        .custom-modal {
+            background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 400px;
+            text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .modal-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .custom-modal h2 { color: var(--text-main); margin-bottom: 0.5rem; font-size: 1.5rem; }
+        .custom-modal p { color: #64748b; font-size: 1rem; margin-bottom: 1.5rem; line-height: 1.5; }
+        
+        .modal-actions { display: flex; gap: 1rem; }
+        .modal-btn {
+            flex: 1; padding: 0.8rem; border: none; border-radius: 8px; cursor: pointer; 
+            font-size: 1rem; font-weight: 500; transition: 0.2s;
+        }
+        .btn-cancel-modal { background: #f1f5f9; color: #64748b; }
+        .btn-cancel-modal:hover { background: #e2e8f0; }
+        .btn-confirm-modal { background: var(--danger-color); color: white; }
+        .btn-confirm-modal:hover { background: #dc2626; }
+        .btn-success-modal { background: var(--success-color); color: white; width: 100%; }
+        .btn-success-modal:hover { background: #059669; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>สวนอาหาร 20 เหรียญ</h1>
+        <h1>👨‍🍳 ครัวหลังร้าน & สรุปยอดขาย</h1>
     </header>
 
     <div class="container">
-        <aside class="sidebar">
-            <h2>หมวดหมู่เมนู</h2>
-            <div id="category-list"></div>
-        </aside>
-
-        <main class="main-content">
-            <h2 id="current-category-title">ทั้งหมด</h2>
-            <div class="menu-grid" id="menu-grid"></div>
-        </main>
-
-        <aside class="cart-section" id="cart-section">
-            <div class="cart-header">
-                <h2>🛒 ตะกร้าสินค้า</h2>
-                <button class="close-cart-btn" onclick="toggleMobileCart()">✕</button>
+        
+        <div class="dashboard-container">
+            <div class="stat-card">
+                <h3>💵 ยอดขายวันนี้</h3>
+                <div class="amount" id="daily-total">0 ฿</div>
             </div>
-            <ul class="cart-items" id="cart-items-list">
-                <li style="text-align:center; color:var(--text-muted); margin-top:3rem; font-size: 0.95rem;">ยังไม่มีสินค้าในตะกร้า</li>
-            </ul>
-            <div class="cart-total">
-                <h3>ยอดรวม: <span><span id="total-price">0</span> ฿</span></h3>
-                <button class="checkout-btn" id="checkout-btn" onclick="openModal()" disabled>ตรวจสอบรายการสั่งซื้อ</button>
+            <div class="stat-card monthly">
+                <h3>📅 ยอดขายเดือนนี้</h3>
+                <div class="amount" id="monthly-total">0 ฿</div>
             </div>
-        </aside>
+            <div class="action-card">
+                <button class="btn-excel" onclick="exportToExcel()">📥 ดาวน์โหลด Excel (ประวัติทั้งหมด)</button>
+                <button class="btn-clear" onclick="openConfirmModal()">🗑️ ล้างประวัติการขายทั้งหมด</button>
+            </div>
+        </div>
+
+        <h2 class="section-title">🍳 ออเดอร์ที่ต้องทำ (รอเสิร์ฟ)</h2>
+        <div id="no-orders-msg" class="no-orders">
+            ไม่มีรายการสั่งซื้อเข้ามาในขณะนี้...
+        </div>
+        
+        <div class="order-grid" id="order-grid">
+            </div>
     </div>
 
-    <button class="floating-cart-btn" onclick="toggleMobileCart()">
-        🛒
-        <span class="cart-badge" id="mobile-cart-badge">0</span>
-    </button>
+    <div id="empty-excel-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-icon">📁</div>
+            <h2 style="color: var(--primary-color);">ไม่มีข้อมูล</h2>
+            <p>ยังไม่มีประวัติการขายให้ส่งออกครับ</p>
+            <button class="modal-btn btn-cancel-modal" style="width: 100%;" onclick="closeEmptyExcelModal()">ตกลง</button>
+        </div>
+    </div>
 
-    <div id="checkout-modal" class="modal">
-        <div class="modal-content">
-            <h2>📝 สรุปรายการสั่งซื้อ</h2>
-            <div id="order-summary"></div>
-            
-            <div class="table-input-container">
-                <label for="table-number">เบอร์โต๊ะ:</label>
-                <input type="text" id="table-number" placeholder="ระบุโต๊ะที่นั่ง" required>
-            </div>
-
-            <div class="modal-total-box">
-                ยอดรวมต้องชำระ: <span id="modal-total-price">0</span> บาท
-            </div>
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-icon">⚠️</div>
+            <h2>ยืนยันการล้างข้อมูล?</h2>
+            <p>คุณแน่ใจหรือไม่ว่าต้องการล้างประวัติการขายทั้งหมด?<br><small style="color:var(--danger-color);">(ยอดขายรายวัน/เดือน จะกลายเป็น 0 และไม่สามารถกู้คืนได้)</small></p>
             <div class="modal-actions">
-                <button class="modal-btn btn-cancel" onclick="closeModal()">ยกเลิก</button>
-                <button class="modal-btn btn-confirm" onclick="confirmOrder()">ยืนยันการสั่งซื้อ</button>
+                <button class="modal-btn btn-cancel-modal" onclick="closeConfirmModal()">ยกเลิก</button>
+                <button class="modal-btn btn-confirm-modal" onclick="executeClearHistory()">ล้างข้อมูล</button>
             </div>
         </div>
     </div>
 
-    <div id="success-modal" class="modal">
-        <div class="modal-content" style="text-align: center; max-width: 400px; padding: 3rem 2rem;">
-            <div class="success-icon">✅</div>
-            <h2 style="border-bottom: none; margin-bottom: 0.5rem; padding-bottom: 0; color: var(--success-color);">สั่งซื้อสำเร็จ!</h2>
-            <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 1.1rem;">ออเดอร์ของคุณถูกส่งไปยังครัวเรียบร้อยแล้ว</p>
-            <button class="modal-btn btn-confirm" style="width: 100%;" onclick="closeSuccessModal()">ตกลง</button>
+    <div id="success-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-icon">✅</div>
+            <h2 style="color: var(--success-color);">สำเร็จ!</h2>
+            <p>ประวัติการขายถูกล้างเรียบร้อยแล้ว</p>
+            <button class="modal-btn btn-success-modal" onclick="closeSuccessModal()">ตกลง</button>
         </div>
     </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        const rawMenuData = [
-            { c: '⭐ เมนูแนะนำ', n: 'ลาบปลานิล', p: 180 }, { c: '⭐ เมนูแนะนำ', n: 'ปลานิลสองฝั่งมูล', p: 280 }, { c: '⭐ เมนูแนะนำ', n: 'ปลาเนื้ออ่อนทอดกระเทียม', p: 250 }, { c: '⭐ เมนูแนะนำ', n: 'ห่อหมกทะเลมะพร้าวอ่อน', p: 250 }, { c: '⭐ เมนูแนะนำ', n: 'ห่อหมกทะเล', p: 190 }, { c: '⭐ เมนูแนะนำ', n: 'ออส่วนกระทะร้อน', p: 150 }, { c: '⭐ เมนูแนะนำ', n: 'ปลากะพงพุงกาง (M)', p: 360 }, { c: '⭐ เมนูแนะนำ', n: 'ปลากะพงพุงกาง (L)', p: 380 }, { c: '⭐ เมนูแนะนำ', n: 'ปลานิลทอดสมุนไพร', p: 250 }, { c: '⭐ เมนูแนะนำ', n: 'แป๊ะซะปลาช่อน (M)', p: 350 }, { c: '⭐ เมนูแนะนำ', n: 'แป๊ะซะปลาช่อน (L)', p: 380 }, { c: '⭐ เมนูแนะนำ', n: 'สลัดผลไม้กุ้งทอด', p: 180 }, { c: '⭐ เมนูแนะนำ', n: 'แซลมอนวาซาบิ', p: 280 },
-            { c: '🦐 เมนูกุ้ง', n: 'กุ้งผัดพริกเกลือ', p: 200 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งผัดไข่เค็ม', p: 220 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งผัดผงกะหรี่', p: 220 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งทอดกระเทียม', p: 200 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งแช่น้ำปลา', p: 180 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งอบวุ้นเส้น', p: 180 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งชุบแป้งทอด', p: 200 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งผัดเม็ดมะม่วง', p: 200 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งทอดซอสมะขาม', p: 250 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งอบเกลือ', p: 250 }, { c: '🦐 เมนูกุ้ง', n: 'กุ้งคั่วพริกเกลือ', p: 180 },
-            { c: '🦑 เมนูหมึก', n: 'หมึกผัดพริกเกลือ', p: 200 }, { c: '🦑 เมนูหมึก', n: 'หมึกผัดไข่เค็ม', p: 220 }, { c: '🦑 เมนูหมึก', n: 'หมึกผัดผงกะหรี่', p: 220 }, { c: '🦑 เมนูหมึก', n: 'หมึกทอดกระเทียม', p: 200 }, { c: '🦑 เมนูหมึก', n: 'หมึกมะนาว', p: 220 }, { c: '🦑 เมนูหมึก', n: 'หมึกผัดพริกไทยดำ', p: 200 },
-            { c: '🦀 เมนูปู', n: 'ปูนิ่มผัดผงกะหรี่', p: 250 }, { c: '🦀 เมนูปู', n: 'ปูนิ่มผัดพริกเกลือ', p: 250 }, { c: '🦀 เมนูปู', n: 'ปูนิ่มทอดกระเทียม', p: 250 }, { c: '🦀 เมนูปู', n: 'ปูนิ่มผัดพริกไทยดำ', p: 250 }, { c: '🦀 เมนูปู', n: 'ปูนิ่มผัดฉ่า', p: 250 },
-            { c: '🌶️ เมนูน้ำพริก', n: 'น้ำพริกลงเรือผักสด', p: 220 }, { c: '🌶️ เมนูน้ำพริก', n: 'หลนปูผักสด', p: 220 }, { c: '🌶️ เมนูน้ำพริก', n: 'หลนเต้าเจี้ยวผักสด', p: 220 },
-            { c: '🥗 ส้มตำ/อีสาน', n: 'ตำปูปลาร้า', p: 60 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำไทย', p: 60 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำไทยไข่เค็ม', p: 70 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำหมูยอ', p: 120 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำกุ้งสด', p: 120 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำทะเล', p: 150 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำถั่ว', p: 60 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำแตง', p: 60 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำถั่วหมูกรอบ', p: 150 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำถั่วไข่เค็ม', p: 70 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ตำลาว', p: 60 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ลาบหมู', p: 120 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ลาบเนื้อ', p: 150 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ลาบไก่', p: 120 }, { c: '🥗 ส้มตำ/อีสาน', n: 'ลาบทอด', p: 150 }, { c: '🥗 ส้มตำ/อีสาน', n: 'คอหมูย่างจิ้มแจ่ว', p: 150 }, { c: '🥗 ส้มตำ/อีสาน', n: 'น้ำตกหมู', p: 120 }, { c: '🥗 ส้มตำ/อีสาน', n: 'น้ำตกเนื้อ', p: 150 },
-            { c: '🐟 เมนูปลา', n: 'ปลากะพงทอดสมุนไพร (M)', p: 360 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงทอดสมุนไพร (L)', p: 380 }, { c: '🐟 เมนูปลา', n: 'ปลาช่อนทอดสมุนไพร (M)', p: 350 }, { c: '🐟 เมนูปลา', n: 'ปลาช่อนทอดสมุนไพร (L)', p: 380 }, { c: '🐟 เมนูปลา', n: 'ปลานิลทอดสมุนไพร', p: 250 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงทอดน้ำปลา (M)', p: 360 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงทอดน้ำปลา (L)', p: 380 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงสามรส (M)', p: 360 }, { c: '🐟 เมนูปลา', n: 'ปลาเนื้ออ่อนสามรส', p: 250 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงลุยสวน (M)', p: 360 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงผัดฉ่า (M)', p: 360 }, { c: '🐟 เมนูปลา', n: 'ปลาคังผัดฉ่า', p: 180 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงแป๊ะซะ (M)', p: 360 }, { c: '🐟 เมนูปลา', n: 'ปลานิลแป๊ะซะ', p: 280 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงนึ่งมะนาว (M)', p: 360 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงนึ่งซีอิ๊ว (M)', p: 360 }, { c: '🐟 เมนูปลา', n: 'ปลากะพงนึ่งจิ้มแจ่ว (M)', p: 360 },
-            { c: '🍲 เมนูต้ม', n: 'ต้มยำกุ้ง น้ำข้น', p: 250 }, { c: '🍲 เมนูต้ม', n: 'ต้มยำกุ้ง น้ำใส', p: 250 }, { c: '🍲 เมนูต้ม', n: 'ต้มยำรวมมิตร', p: 250 }, { c: '🍲 เมนูต้ม', n: 'ต้มยำโป๊ะแตก', p: 220 }, { c: '🍲 เมนูต้ม', n: 'ต้มยำไก่บ้าน', p: 190 }, { c: '🍲 เมนูต้ม', n: 'ต้มยำรังไข่', p: 150 }, { c: '🍲 เมนูต้ม', n: 'ต้มแซ่บกระดูกอ่อน', p: 180 }, { c: '🍲 เมนูต้ม', n: 'ต้มจืดเต้าหู้หมูสับ-สาหร่าย', p: 150 }, { c: '🍲 เมนูต้ม', n: 'ต้มยำปลากะพง (M)', p: 360 }, { c: '🍲 เมนูต้ม', n: 'ต้มยำปลาคัง', p: 180 },
-            { c: '🍗 เมนูทอด', n: 'ไก่บ้านทอดน้ำปลา', p: 190 }, { c: '🍗 เมนูทอด', n: 'เอ็นไก่ทอด', p: 120 }, { c: '🍗 เมนูทอด', n: 'ไส้ตันทอดกระเทียม', p: 150 }, { c: '🍗 เมนูทอด', n: 'ปีกไก่ทอด', p: 120 }, { c: '🍗 เมนูทอด', n: 'หมูกรอบคั่วพริกเกลือ', p: 180 }, { c: '🍗 เมนูทอด', n: 'สามชั้นทอดน้ำปลา', p: 180 }, { c: '🍗 เมนูทอด', n: 'ผักชุบแป้งทอด', p: 120 }, { c: '🍗 เมนูทอด', n: 'ไก่บ้านทอดเกลือ', p: 190 }, { c: '🍗 เมนูทอด', n: 'ไก่บ้านทอดสมุนไพร', p: 190 }, { c: '🍗 เมนูทอด', n: 'ทอดมันปลากราย', p: 150 }, { c: '🍗 เมนูทอด', n: 'ทอดมันกุ้ง', p: 190 },
-            { c: '🥘 เมนูผัด', n: 'ผัดเผ็ดหมูป่า', p: 150 }, { c: '🥘 เมนูผัด', n: 'ผัดเผ็ดหมู', p: 120 }, { c: '🥘 เมนูผัด', n: 'ผัดเผ็ดไก่', p: 120 }, { c: '🥘 เมนูผัด', n: 'ผัดเผ็ดเนื้อ', p: 150 }, { c: '🥘 เมนูผัด', n: 'ผัดเผ็ดไก่บ้าน', p: 150 }, { c: '🥘 เมนูผัด', n: 'ผัดผักรวม', p: 120 }, { c: '🥘 เมนูผัด', n: 'ผัดผักรวมกุ้ง', p: 150 }, { c: '🥘 เมนูผัด', n: 'บล็อกโคลี่ผัดกุ้ง', p: 150 }, { c: '🥘 เมนูผัด', n: 'ผัดผักบุ้งไฟแดง', p: 100 }, { c: '🥘 เมนูผัด', n: 'คะน้าผัดน้ำมันหอย', p: 100 }, { c: '🥘 เมนูผัด', n: 'ไก่ผัดเม็ดมะม่วง', p: 150 }, { c: '🥘 เมนูผัด', n: 'ฉู่ฉี่ปลาเนื้ออ่อน', p: 250 }, { c: '🥘 เมนูผัด', n: 'ทะเลผัดผงกะหรี่', p: 220 }, { c: '🥘 เมนูผัด', n: 'ผัดขึ้นฉ่ายปลาช่อน', p: 280 }, { c: '🥘 เมนูผัด', n: 'ผัดฉ่าทะเล', p: 220 }, { c: '🥘 เมนูผัด', n: 'ผัดฉ่าปลาหมึก', p: 220 }, { c: '🥘 เมนูผัด', n: 'ผัดกกะเพราเนื้อ', p: 150 }, { c: '🥘 เมนูผัด', n: 'ผัดเห็ดใส่กุ้ง', p: 150 }, { c: '🥘 เมนูผัด', n: 'ผัดกะเพราหมูสับ', p: 120 }, { c: '🥘 เมนูผัด', n: 'ผัดขี้เมาทะเล', p: 220 },
-            { c: '🍛 เมนูแกง', n: 'แกงส้มผักรวม', p: 180 }, { c: '🍛 เมนูแกง', n: 'แกงส้มชะอมกุ้ง', p: 220 }, { c: '🍛 เมนูแกง', n: 'แกงส้มชะอมไข่', p: 180 }, { c: '🍛 เมนูแกง', n: 'แกงคั่วหอยขม', p: 150 }, { c: '🍛 เมนูแกง', n: 'แกงอ่อมหมู', p: 150 }, { c: '🍛 เมนูแกง', n: 'แกงอ่อมไก่บ้าน', p: 150 }, { c: '🍛 เมนูแกง', n: 'แกงอ่อมเนื้อ', p: 180 }, { c: '🍛 เมนูแกง', n: 'แกงเลียงกุ้งสด', p: 180 }, { c: '🍛 เมนูแกง', n: 'แกงป่าไก่บ้าน', p: 150 }, { c: '🍛 เมนูแกง', n: 'แกงคั่วหอยแมลงภู่', p: 150 },
-            { c: '🥗 ยำ / พล่า', n: 'ยำหมูยอ', p: 120 }, { c: '🥗 ยำ / พล่า', n: 'ยำวุ้นเส้น', p: 120 }, { c: '🥗 ยำ / พล่า', n: 'ยำวุ้นเส้นรวมมิตรทะเล', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำรวมมิตรทะเล', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำสามกรอบ', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำไข่เยี่ยวม้า', p: 120 }, { c: '🥗 ยำ / พล่า', n: 'ยำถั่วพลู', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำผักบุ้งกรอบ', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำตะไคร้กุ้งสด', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำหอยนางรม', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำปลาแซลมอน', p: 280 }, { c: '🥗 ยำ / พล่า', n: 'ยำปลาดุกฟู', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำไส้ตัน', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำคอหมูย่าง', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'ยำปลาหมึก', p: 150 }, { c: '🥗 ยำ / พล่า', n: 'พล่าแซลมอน', p: 280 }, { c: '🥗 ยำ / พล่า', n: 'พล่ากุ้ง', p: 180 },
-            { c: '🥩 สเต็ก', n: 'สเต็กหมู', p: 159 }, { c: '🥩 สเต็ก', n: 'ทีโบนสเต็ก', p: 239 }, { c: '🥩 สเต็ก', n: 'พอร์คชอปสเต็ก', p: 239 }, { c: '🥩 สเต็ก', n: 'สเต็กลาวจิ้มแจ่ว', p: 250 },
-            { c: '🥜 กับแกล้ม', n: 'เม็ดมะม่วงทอด', p: 100 }, { c: '🥜 กับแกล้ม', n: 'หมูแดดเดียว', p: 150 }, { c: '🥜 กับแกล้ม', n: 'เนื้อแดดเดียว', p: 150 }, { c: '🥜 กับแกล้ม', n: 'เฟรนฟราย', p: 80 }, { c: '🥜 กับแกล้ม', n: 'ถั่วทอด', p: 70 }, { c: '🥜 กับแกล้ม', n: 'ปลาคังลวกจิ้ม', p: 180 }, { c: '🥜 กับแกล้ม', n: 'หมูมะนาว', p: 120 }, { c: '🥜 กับแกล้ม', n: 'ออเดิร์ฟอีสาน', p: 150 },
-            { c: '🍳 เมนูไข่', n: 'ไข่เจียว', p: 120 }, { c: '🍳 เมนูไข่', n: 'ไข่เจียวหมูสับ', p: 150 }, { c: '🍳 เมนูไข่', n: 'ไข่เจียวปู', p: 180 }, { c: '🍳 เมนูไข่', n: 'ไข่ต้ม', p: 10 }, { c: '🍳 เมนูไข่', n: 'ไข่ดาว', p: 10 },
-            { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวสวย (จาน)', p: 15 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวสวย (โถ)', p: 50 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวต้มหมู', p: 60 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวต้มปลา', p: 70 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวต้มกุ้ง', p: 70 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดกุ้ง (เล็ก)', p: 70 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดกุ้ง (ใหญ่)', p: 220 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดปลาหมึก (เล็ก)', p: 70 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดปลาหมึก (ใหญ่)', p: 220 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดรวมมิตร (เล็ก)', p: 70 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดรวมมิตร (ใหญ่)', p: 220 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดปู (เล็ก)', p: 70 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดปู (ใหญ่)', p: 220 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดหมู (เล็ก)', p: 70 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดหมู (ใหญ่)', p: 150 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดไก่ (เล็ก)', p: 70 }, { c: '🍚 ข้าว/ข้าวผัด', n: 'ข้าวผัดไก่ (ใหญ่)', p: 150 },
-            { c: '🍽️ อาหารจานด่วน', n: 'กะเพราหมูราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'กะเพราไก่ราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'กะเพราเนื้อราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'กะเพราหมูกรอบราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'กะเพรากุ้งราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'กะเพราหมึกราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'กะเพราทะเลราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'ผัดขี้เมาหมูราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'ผัดขี้เมาไก่ราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'ผัดขี้เมาทะเลราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'ผัดเผ็ดหมูราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'ผัดพริกแกงหมูราดข้าว', p: 70 }, { c: '🍽️ อาหารจานด่วน', n: 'ข้าวคลุกกะปิ', p: 70 },
-            { c: '🍨 ของหวาน/ผลไม้', n: 'เฉาก๊วยนมสด', p: 50 }, { c: '🍨 ของหวาน/ผลไม้', n: 'ผลไม้กระป๋อง', p: 180 }, { c: '🍨 ของหวาน/ผลไม้', n: 'ผลไม้สด', p: 220 },
-            // --- รายการเครื่องดื่ม (กระจายรสชาติออกจากกัน) ---
-            { c: '🥃 เหล้า', n: 'รีเจนซี่ (แบน)', p: 520 }, { c: '🥃 เหล้า', n: 'รีเจนซี่ (กลม)', p: 720 },
-            { c: '🥃 เหล้า', n: 'หงส์ทอง (แบน)', p: 195 }, { c: '🥃 เหล้า', n: 'หงส์ทอง (กลม)', p: 360 },
-            { c: '🥃 เหล้า', n: 'แสงโสม (แบน)', p: 215 }, { c: '🥃 เหล้า', n: 'แสงโสม (กลม)', p: 390 },
-            { c: '🍺 เบียร์', n: 'เบียร์ช้าง', p: 75 }, { c: '🍺 เบียร์', n: 'เบียร์ลีโอ', p: 80 }, { c: '🍺 เบียร์', n: 'เบียร์สิงห์', p: 90 },
-            { c: '🍹 สปาย', n: 'สปาย (สีแดง)', p: 45 }, 
-            { c: '🍹 สปาย', n: 'สปาย (สีเขียว)', p: 45 }, 
-            { c: '🍹 สปาย', n: 'สปาย (สีม่วง)', p: 45 }, 
-            { c: '🍹 สปาย', n: 'สปาย (สีชมพู)', p: 45 },
-            { c: '🥤 เครื่องดื่ม', n: 'โซดา (ขวด)', p: 20 },
-            { c: '🧊 น้ำแข็ง', n: 'น้ำแข็ง (เล็ก)', p: 25 }, { c: '🧊 น้ำแข็ง', n: 'น้ำแข็ง (ใหญ่)', p: 50 },
-            { c: '🥤 เครื่องดื่ม', n: 'เป๊ปซี่ (ขวดเล็ก)', p: 20 }, 
-            { c: '🥤 เครื่องดื่ม', n: 'น้ำแดง (ขวดเล็ก)', p: 20 }, 
-            { c: '🥤 เครื่องดื่ม', n: 'น้ำส้ม (ขวดเล็ก)', p: 20 }, 
-            { c: '🥤 เครื่องดื่ม', n: 'น้ำเขียว (ขวดเล็ก)', p: 20 }, 
-            { c: '🥤 เครื่องดื่ม', n: '7Up (ขวดเล็ก)', p: 20 },
-            { c: '🥤 เครื่องดื่ม', n: 'น้ำเป๊ปซี่ (ขวดใหญ่)', p: 45 },
-            { c: '🥤 เครื่องดื่ม', n: 'น้ำโค้ก (ขวดใหญ่)', p: 45 },
-            { c: '🥤 เครื่องดื่ม', n: 'น้ำเปล่า (ขวดเล็ก)', p: 20 }, { c: '🥤 เครื่องดื่ม', n: 'น้ำเปล่า (ขวดใหญ่)', p: 30 },
-            { c: '🥤 เครื่องดื่ม', n: 'ชาลิปตัน', p: 25 }
-        ];
+        // 1. ใส่ firebaseConfig ตัวเดียวกันกับหน้า Index เป๊ะๆ ครับ
+        const firebaseConfig = {
+            apiKey: "ใส่_API_KEY_ของคุณ",
+            authDomain: "ใส่_AUTH_DOMAIN_ของคุณ",
+            databaseURL: "ใส่_DATABASE_URL_ของคุณ",
+            projectId: "ใส่_PROJECT_ID_ของคุณ",
+            storageBucket: "ใส่_STORAGE_BUCKET_ของคุณ",
+            messagingSenderId: "ใส่_SENDER_ID_ของคุณ",
+            appId: "ใส่_APP_ID_ของคุณ"
+        };
 
-        const menuData = rawMenuData.map((item, index) => ({ id: 'menu_' + index, category: item.c, name: item.n, price: item.p }));
-        let cart = [];
-        const categories = ['ทั้งหมด', ...new Set(menuData.map(item => item.category))];
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-        function renderCategories() {
-            const categoryList = document.getElementById('category-list');
-            categoryList.innerHTML = '';
-            categories.forEach(category => {
-                const btn = document.createElement('button');
-                btn.className = 'category-btn';
-                if (category === 'ทั้งหมด') btn.classList.add('active');
-                btn.textContent = category;
-                btn.onclick = () => filterMenu(category, btn);
-                categoryList.appendChild(btn);
-            });
-        }
+        // 2. ดักฟังข้อมูลแบบ Real-time
+        database.ref('restaurantOrders').on('value', (snapshot) => {
+            const data = snapshot.val();
+            let ordersArray = [];
+            
+            for (let key in data) {
+                ordersArray.push({ firebaseKey: key, ...data[key] });
+            }
+            
+            renderOrdersGrid(ordersArray);
+        });
 
-        function filterMenu(category, selectedBtn) {
-            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
-            if(selectedBtn) selectedBtn.classList.add('active');
-            document.getElementById('current-category-title').textContent = category;
-            const filteredItems = category === 'ทั้งหมด' ? menuData : menuData.filter(item => item.category === category);
-            renderMenuItems(filteredItems, category);
-        }
+        // ดักฟังประวัติการขาย (History) แบบ Real-time
+        database.ref('restaurantHistory').on('value', (snapshot) => {
+            const data = snapshot.val();
+            let historyArray = [];
+            for (let key in data) {
+                historyArray.push(data[key]);
+            }
+            calculateTotals(historyArray);
+            window.currentHistory = historyArray; 
+        });
 
-        function renderMenuItems(items, currentCategory = 'ทั้งหมด') {
-            const grid = document.getElementById('menu-grid');
+        function renderOrdersGrid(orders) {
+            const grid = document.getElementById('order-grid');
+            const noOrdersMsg = document.getElementById('no-orders-msg');
             grid.innerHTML = '';
-            if (currentCategory === 'ทั้งหมด') {
-                categories.forEach(cat => {
-                    if (cat === 'ทั้งหมด') return;
-                    const catItems = items.filter(item => item.category === cat);
-                    if (catItems.length > 0) {
-                        const title = document.createElement('h3');
-                        title.className = 'category-section-title';
-                        title.textContent = cat;
-                        grid.appendChild(title);
-                        catItems.forEach(item => grid.appendChild(createMenuCard(item)));
+
+            if (!orders || orders.length === 0) {
+                noOrdersMsg.style.display = 'block';
+            } else {
+                noOrdersMsg.style.display = 'none';
+                
+                orders.forEach((order) => {
+                    const card = document.createElement('div');
+                    card.className = 'order-card';
+                    
+                    let itemsHtml = '';
+                    if (order.items) {
+                        order.items.forEach(item => {
+                            itemsHtml += `
+                                <li>
+                                    <span>${item.name} <b>x${item.quantity}</b></span>
+                                    <span>${(item.price * item.quantity).toLocaleString()} ฿</span>
+                                </li>
+                            `;
+                        });
                     }
-                });
-            } else {
-                items.forEach(item => grid.appendChild(createMenuCard(item)));
-            }
-        }
 
-        function createMenuCard(item) {
-            const card = document.createElement('div');
-            card.className = 'menu-card';
-            card.innerHTML = `
-                <div><h3>${item.name}</h3><p class="price">${item.price} บาท</p></div>
-                <button class="add-btn" onclick="addToCart('${item.id}')">+ เพิ่มลงตะกร้า</button>`;
-            return card;
-        }
-
-        function addToCart(itemId) {
-            const menuItem = menuData.find(item => item.id === itemId);
-            const existingCartItem = cart.find(item => item.id === itemId);
-            if (existingCartItem) existingCartItem.quantity += 1;
-            else cart.push({ ...menuItem, quantity: 1 });
-            updateCartUI();
-        }
-
-        function removeFromCart(itemId) {
-            const itemIndex = cart.findIndex(item => item.id === itemId);
-            if (itemIndex > -1) {
-                if (cart[itemIndex].quantity > 1) cart[itemIndex].quantity -= 1;
-                else cart.splice(itemIndex, 1);
-            }
-            updateCartUI();
-        }
-
-        function updateCartUI() {
-            const cartList = document.getElementById('cart-items-list');
-            const totalPriceEl = document.getElementById('total-price');
-            const checkoutBtn = document.getElementById('checkout-btn');
-            const mobileBadge = document.getElementById('mobile-cart-badge');
-            
-            cartList.innerHTML = '';
-            let total = 0;
-            let totalItemsCount = 0;
-
-            if (cart.length === 0) {
-                cartList.innerHTML = '<li style="text-align:center; color:var(--text-muted); margin-top:3rem; font-size: 0.95rem;">ยังไม่มีสินค้าในตะกร้า</li>';
-                checkoutBtn.disabled = true;
-            } else {
-                checkoutBtn.disabled = false;
-                cart.forEach(item => {
-                    const itemTotal = item.price * item.quantity;
-                    total += itemTotal;
-                    totalItemsCount += item.quantity;
-
-                    const li = document.createElement('li');
-                    li.className = 'cart-item';
-                    li.innerHTML = `
-                        <div class="cart-item-info">
-                            <strong>${item.name}</strong>
-                            <small>${item.price} x ${item.quantity} = ${itemTotal.toLocaleString()} บ.</small>
+                    card.innerHTML = `
+                        <div class="order-header">
+                            <div>
+                                <div class="order-table">โต๊ะ: ${order.table || '-'}</div>
+                                <div style="font-size: 0.85rem; color: #94a3b8;">รหัส: ${order.id}</div>
+                            </div>
+                            <div class="order-time">เวลา: ${order.time}</div>
                         </div>
-                        <div class="cart-item-actions">
-                            <button class="cart-btn" onclick="removeFromCart('${item.id}')">-</button>
-                            <span>${item.quantity}</span>
-                            <button class="cart-btn" onclick="addToCart('${item.id}')">+</button>
+                        <ul class="order-items">
+                            ${itemsHtml}
+                        </ul>
+                        <div class="order-total">
+                            รวม: ${order.total ? order.total.toLocaleString() : 0} ฿
                         </div>
+                        <button class="done-btn" onclick="markAsDone('${order.firebaseKey}')">ทำอาหารเสร็จแล้ว</button>
                     `;
-                    cartList.appendChild(li);
+                    grid.appendChild(card);
                 });
             }
-
-            totalPriceEl.textContent = total.toLocaleString();
-            mobileBadge.textContent = totalItemsCount;
-            if(totalItemsCount > 0) mobileBadge.style.display = 'flex';
-            else mobileBadge.style.display = 'none';
         }
 
-        function toggleMobileCart() {
-            document.getElementById('cart-section').classList.toggle('open');
+        // เวลากดทำอาหารเสร็จ ย้ายข้อมูลจาก Orders ไป History ในฐานข้อมูลออนไลน์
+        function markAsDone(firebaseKey) {
+            database.ref('restaurantOrders/' + firebaseKey).once('value').then((snapshot) => {
+                const completedOrder = snapshot.val();
+                
+                database.ref('restaurantHistory').push(completedOrder).then(() => {
+                    database.ref('restaurantOrders/' + firebaseKey).remove();
+                });
+            });
         }
 
-        function openModal() {
-            document.getElementById('cart-section').classList.remove('open');
-            const modal = document.getElementById('checkout-modal');
-            const orderSummary = document.getElementById('order-summary');
-            const modalTotalPrice = document.getElementById('modal-total-price');
+        // ฟังก์ชันคำนวณยอดเงิน 
+        function calculateTotals(history) {
+            const now = new Date();
+            const todayStr = now.toLocaleDateString('th-TH'); 
+            const currentMonthStr = todayStr.substring(todayStr.indexOf('/') + 1); 
             
-            document.getElementById('table-number').value = '';
-            
-            orderSummary.innerHTML = '';
-            let total = 0;
+            let dailyTotal = 0;
+            let monthlyTotal = 0;
 
-            cart.forEach(item => {
-                const itemTotal = item.price * item.quantity;
-                total += itemTotal;
-                const div = document.createElement('div');
-                div.className = 'summary-item';
-                div.innerHTML = `<span>${item.name} <span style="color:var(--text-muted)">(x${item.quantity})</span></span><span style="font-weight:500;">${itemTotal.toLocaleString()} ฿</span>`;
-                orderSummary.appendChild(div);
+            history.forEach(order => {
+                const total = Number(order.total) || 0;
+                if (order.date === todayStr) { dailyTotal += total; }
+                if (order.date && order.date.endsWith(currentMonthStr)) { monthlyTotal += total; }
             });
 
-            modalTotalPrice.textContent = total.toLocaleString();
-            modal.style.display = 'flex';
+            document.getElementById('daily-total').textContent = dailyTotal.toLocaleString() + ' ฿';
+            document.getElementById('monthly-total').textContent = monthlyTotal.toLocaleString() + ' ฿';
         }
 
-        function closeModal() { document.getElementById('checkout-modal').style.display = 'none'; }
-
-        function confirmOrder() {
-            const tableNumber = document.getElementById('table-number').value;
-
-            if (!tableNumber) {
-                alert('กรุณาระบุเบอร์โต๊ะก่อนยืนยันการสั่งซื้อครับ 😅');
-                document.getElementById('table-number').focus();
-                return; 
+        function exportToExcel() {
+            let history = window.currentHistory || [];
+            if (history.length === 0) {
+                openEmptyExcelModal();
+                return;
             }
-
-            closeModal();
             
-            if (cart.length > 0) {
-                const orderTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                const orderData = {
-                    id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
-                    table: tableNumber,
-                    time: new Date().toLocaleTimeString('th-TH'),
-                    items: [...cart],
-                    total: orderTotal
+            const excelData = history.map(order => {
+                const itemsList = order.items ? order.items.map(i => `${i.name} (x${i.quantity})`).join(', ') : '-';
+                return {
+                    'รหัสออเดอร์': order.id || '-',
+                    'วันที่': order.date || '-',
+                    'เวลา': order.time || '-',
+                    'เบอร์โต๊ะ': order.table || '-',
+                    'รายการอาหาร': itemsList,
+                    'ยอดรวม (บาท)': order.total || 0
                 };
+            });
 
-                let existingOrders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
-                existingOrders.push(orderData);
-                localStorage.setItem('restaurantOrders', JSON.stringify(existingOrders));
-            }
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "ประวัติยอดขาย");
 
-            cart = [];
-            updateCartUI();
-            document.getElementById('success-modal').style.display = 'flex';
+            const today = new Date().toLocaleDateString('th-TH').replace(/\//g, '-');
+            XLSX.writeFile(workbook, `สรุปยอดขาย_${today}.xlsx`);
+        }
+
+        function openEmptyExcelModal() { document.getElementById('empty-excel-modal').style.display = 'flex'; }
+        function closeEmptyExcelModal() { document.getElementById('empty-excel-modal').style.display = 'none'; }
+        function openConfirmModal() { document.getElementById('confirm-modal').style.display = 'flex'; }
+        function closeConfirmModal() { document.getElementById('confirm-modal').style.display = 'none'; }
+
+        // ล้างข้อมูลบนฐานข้อมูลออนไลน์
+        function executeClearHistory() {
+            database.ref('restaurantHistory').remove().then(() => {
+                closeConfirmModal();
+                document.getElementById('success-modal').style.display = 'flex';
+            });
         }
 
         function closeSuccessModal() { document.getElementById('success-modal').style.display = 'none'; }
-
-        renderCategories();
-        renderMenuItems(menuData, 'ทั้งหมด');
-        updateCartUI();
 
     </script>
 </body>
