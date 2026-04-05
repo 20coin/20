@@ -209,21 +209,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // 1. นำ firebaseConfig ที่ได้จาก Firebase มาใส่ตรงนี้ครับ
-        const firebaseConfig = {
-            apiKey: "ใส่_API_KEY_ของคุณ",
-            authDomain: "ใส่_AUTH_DOMAIN_ของคุณ",
-            databaseURL: "ใส่_DATABASE_URL_ของคุณ",
-            projectId: "ใส่_PROJECT_ID_ของคุณ",
-            storageBucket: "ใส่_STORAGE_BUCKET_ของคุณ",
-            messagingSenderId: "ใส่_SENDER_ID_ของคุณ",
-            appId: "ใส่_APP_ID_ของคุณ"
-        };
-
-        // 2. เริ่มต้นเชื่อมต่อ Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
         // ข้อมูลเมนูเดิมทั้งหมด
         const rawMenuData = [
             { c: '⭐ เมนูแนะนำ', n: 'ลาบปลานิล', p: 180 }, { c: '⭐ เมนูแนะนำ', n: 'ปลานิลสองฝั่งมูล', p: 280 }, { c: '⭐ เมนูแนะนำ', n: 'ปลาเนื้ออ่อนทอดกระเทียม', p: 250 }, { c: '⭐ เมนูแนะนำ', n: 'ห่อหมกทะเลมะพร้าวอ่อน', p: 250 }, { c: '⭐ เมนูแนะนำ', n: 'ห่อหมกทะเล', p: 190 }, { c: '⭐ เมนูแนะนำ', n: 'ออส่วนกระทะร้อน', p: 150 }, { c: '⭐ เมนูแนะนำ', n: 'ปลากะพงพุงกาง (M)', p: 360 }, { c: '⭐ เมนูแนะนำ', n: 'ปลากะพงพุงกาง (L)', p: 380 }, { c: '⭐ เมนูแนะนำ', n: 'ปลานิลทอดสมุนไพร', p: 250 }, { c: '⭐ เมนูแนะนำ', n: 'แป๊ะซะปลาช่อน (M)', p: 350 }, { c: '⭐ เมนูแนะนำ', n: 'แป๊ะซะปลาช่อน (L)', p: 380 }, { c: '⭐ เมนูแนะนำ', n: 'สลัดผลไม้กุ้งทอด', p: 180 }, { c: '⭐ เมนูแนะนำ', n: 'แซลมอนวาซาบิ', p: 280 },
@@ -408,8 +393,42 @@
         }
 
         function closeModal() { document.getElementById('checkout-modal').style.display = 'none'; }
+        function closeSuccessModal() { document.getElementById('success-modal').style.display = 'none'; }
 
-        // ส่งข้อมูลขึ้น Firebase
+        // --- วาดหน้าจอ UI ทันที (แก้ปัญหาจอขาว) ---
+        renderCategories();
+        renderMenuItems(menuData, 'ทั้งหมด');
+        updateCartUI();
+
+        // --- ระบบตั้งค่า Firebase แบบป้องกัน Error ---
+        let isOnlineMode = false;
+        let onlineDatabase = null;
+
+        const firebaseConfig = {
+            apiKey: "ใส่_API_KEY_ของคุณ",
+            authDomain: "ใส่_AUTH_DOMAIN_ของคุณ",
+            databaseURL: "ใส่_DATABASE_URL_ของคุณ",
+            projectId: "ใส่_PROJECT_ID_ของคุณ",
+            storageBucket: "ใส่_STORAGE_BUCKET_ของคุณ",
+            messagingSenderId: "ใส่_SENDER_ID_ของคุณ",
+            appId: "ใส่_APP_ID_ของคุณ"
+        };
+
+        // ตรวจสอบว่าคุณอาร์มใส่คีย์ของจริงแล้วหรือยัง ถ้ายังไม่ใส่ จะทำงานแบบ Offline ไปก่อน
+        if (!firebaseConfig.apiKey.includes("ใส่_")) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                onlineDatabase = firebase.database();
+                isOnlineMode = true;
+                console.log("เชื่อมต่อ Firebase สำเร็จ! ทำงานในโหมด Online (Real-time)");
+            } catch (error) {
+                console.error("เชื่อมต่อ Firebase ไม่สำเร็จ:", error);
+            }
+        } else {
+            console.log("ยังไม่ได้ใส่คีย์ Firebase ทำงานในโหมด Offline (Local)");
+        }
+
+        // --- ระบบส่งคำสั่งซื้อแบบสลับโหมดอัตโนมัติ ---
         function confirmOrder() {
             const tableNumber = document.getElementById('table-number').value;
 
@@ -434,22 +453,27 @@
                     status: 'pending'
                 };
 
-                database.ref('restaurantOrders').push(orderData).then(() => {
+                if (isOnlineMode) {
+                    // ทำงานแบบออนไลน์ (ส่งขึ้น Firebase)
+                    onlineDatabase.ref('restaurantOrders').push(orderData).then(() => {
+                        cart = [];
+                        updateCartUI();
+                        document.getElementById('success-modal').style.display = 'flex';
+                    }).catch((error) => {
+                        console.error("Error: ", error);
+                        alert("เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาลองใหม่ครับ");
+                    });
+                } else {
+                    // ทำงานแบบออฟไลน์ (เก็บในเครื่องเดิม) เพื่อไม่ให้จอค้าง
+                    let existingOrders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
+                    existingOrders.push(orderData);
+                    localStorage.setItem('restaurantOrders', JSON.stringify(existingOrders));
                     cart = [];
                     updateCartUI();
                     document.getElementById('success-modal').style.display = 'flex';
-                }).catch((error) => {
-                    console.error("เกิดข้อผิดพลาดในการสั่งอาหาร: ", error);
-                    alert("เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาลองใหม่ครับ");
-                });
+                }
             }
         }
-
-        function closeSuccessModal() { document.getElementById('success-modal').style.display = 'none'; }
-
-        renderCategories();
-        renderMenuItems(menuData, 'ทั้งหมด');
-        updateCartUI();
 
     </script>
 </body>
