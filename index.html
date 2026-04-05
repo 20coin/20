@@ -400,32 +400,30 @@
         renderMenuItems(menuData, 'ทั้งหมด');
         updateCartUI();
 
-        // --- ระบบตั้งค่า Firebase แบบป้องกัน Error ---
+        // --- ระบบตั้งค่า Firebase (อัปเดตค่า Config ใหม่แล้ว) ---
         let isOnlineMode = false;
         let onlineDatabase = null;
 
         const firebaseConfig = {
-            apiKey: "ใส่_API_KEY_ของคุณ",
-            authDomain: "ใส่_AUTH_DOMAIN_ของคุณ",
-            databaseURL: "ใส่_DATABASE_URL_ของคุณ",
-            projectId: "ใส่_PROJECT_ID_ของคุณ",
-            storageBucket: "ใส่_STORAGE_BUCKET_ของคุณ",
-            messagingSenderId: "ใส่_SENDER_ID_ของคุณ",
-            appId: "ใส่_APP_ID_ของคุณ"
+            apiKey: "AIzaSyA3uA0hPcwrxRWKnfCjS7JYArOkGAY4r3Q",
+            authDomain: "myrestaurant-298ec.firebaseapp.com",
+            databaseURL: "https://myrestaurant-298ec-default-rtdb.firebaseio.com", 
+            projectId: "myrestaurant-298ec",
+            storageBucket: "myrestaurant-298ec.firebasestorage.app",
+            messagingSenderId: "297474064110",
+            appId: "1:297474064110:web:1fe0b37b8ec8897e8a7dff"
         };
 
-        // ตรวจสอบว่าคุณอาร์มใส่คีย์ของจริงแล้วหรือยัง ถ้ายังไม่ใส่ จะทำงานแบบ Offline ไปก่อน
-        if (!firebaseConfig.apiKey.includes("ใส่_")) {
-            try {
+        // ตรวจสอบความถูกต้องและเริ่มทำงาน
+        try {
+            if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("ใส่_")) {
                 firebase.initializeApp(firebaseConfig);
                 onlineDatabase = firebase.database();
                 isOnlineMode = true;
-                console.log("เชื่อมต่อ Firebase สำเร็จ! ทำงานในโหมด Online (Real-time)");
-            } catch (error) {
-                console.error("เชื่อมต่อ Firebase ไม่สำเร็จ:", error);
+                console.log("เชื่อมต่อ Firebase สำเร็จ! ออเดอร์จะถูกส่งขึ้น Cloud ทันที");
             }
-        } else {
-            console.log("ยังไม่ได้ใส่คีย์ Firebase ทำงานในโหมด Offline (Local)");
+        } catch (error) {
+            console.error("เชื่อมต่อ Firebase ไม่สำเร็จ:", error);
         }
 
         // --- ระบบส่งคำสั่งซื้อแบบสลับโหมดอัตโนมัติ ---
