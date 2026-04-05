@@ -30,7 +30,6 @@
 
         .container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
 
-        /* --- ส่วน Dashboard แสดงยอดขายและ Export --- */
         .dashboard-container {
             display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;
             padding-bottom: 2rem; border-bottom: 2px dashed var(--border-color);
@@ -84,7 +83,6 @@
         }
         .done-btn:hover { background: #059669; }
 
-        /* --- Custom Modal Style --- */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);
@@ -176,37 +174,72 @@
         </div>
     </div>
 
-    <script>
-        function loadOrders() {
-            renderOrdersGrid();
-            calculateTotals();
-        }
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-        function renderOrdersGrid() {
+    <script>
+        // 1. ใส่ firebaseConfig ตัวเดียวกันกับหน้า Index เป๊ะๆ ครับ
+        const firebaseConfig = {
+            apiKey: "ใส่_API_KEY_ของคุณ",
+            authDomain: "ใส่_AUTH_DOMAIN_ของคุณ",
+            databaseURL: "ใส่_DATABASE_URL_ของคุณ",
+            projectId: "ใส่_PROJECT_ID_ของคุณ",
+            storageBucket: "ใส่_STORAGE_BUCKET_ของคุณ",
+            messagingSenderId: "ใส่_SENDER_ID_ของคุณ",
+            appId: "ใส่_APP_ID_ของคุณ"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // 2. ดักฟังข้อมูลแบบ Real-time
+        database.ref('restaurantOrders').on('value', (snapshot) => {
+            const data = snapshot.val();
+            let ordersArray = [];
+            
+            for (let key in data) {
+                ordersArray.push({ firebaseKey: key, ...data[key] });
+            }
+            
+            renderOrdersGrid(ordersArray);
+        });
+
+        // ดักฟังประวัติการขาย (History) แบบ Real-time
+        database.ref('restaurantHistory').on('value', (snapshot) => {
+            const data = snapshot.val();
+            let historyArray = [];
+            for (let key in data) {
+                historyArray.push(data[key]);
+            }
+            calculateTotals(historyArray);
+            window.currentHistory = historyArray; 
+        });
+
+        function renderOrdersGrid(orders) {
             const grid = document.getElementById('order-grid');
             const noOrdersMsg = document.getElementById('no-orders-msg');
-            const orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
-
             grid.innerHTML = '';
 
-            if (orders.length === 0) {
+            if (!orders || orders.length === 0) {
                 noOrdersMsg.style.display = 'block';
             } else {
                 noOrdersMsg.style.display = 'none';
                 
-                orders.forEach((order, index) => {
+                orders.forEach((order) => {
                     const card = document.createElement('div');
                     card.className = 'order-card';
                     
                     let itemsHtml = '';
-                    order.items.forEach(item => {
-                        itemsHtml += `
-                            <li>
-                                <span>${item.name} <b>x${item.quantity}</b></span>
-                                <span>${(item.price * item.quantity).toLocaleString()} ฿</span>
-                            </li>
-                        `;
-                    });
+                    if (order.items) {
+                        order.items.forEach(item => {
+                            itemsHtml += `
+                                <li>
+                                    <span>${item.name} <b>x${item.quantity}</b></span>
+                                    <span>${(item.price * item.quantity).toLocaleString()} ฿</span>
+                                </li>
+                            `;
+                        });
+                    }
 
                     card.innerHTML = `
                         <div class="order-header">
@@ -220,36 +253,28 @@
                             ${itemsHtml}
                         </ul>
                         <div class="order-total">
-                            รวม: ${order.total.toLocaleString()} ฿
+                            รวม: ${order.total ? order.total.toLocaleString() : 0} ฿
                         </div>
-                        <button class="done-btn" onclick="markAsDone(${index})">ทำอาหารเสร็จแล้ว</button>
+                        <button class="done-btn" onclick="markAsDone('${order.firebaseKey}')">ทำอาหารเสร็จแล้ว</button>
                     `;
                     grid.appendChild(card);
                 });
             }
         }
 
-        function markAsDone(indexToRemove) {
-            let orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
-            let history = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
-            
-            let completedOrder = orders.splice(indexToRemove, 1)[0];
-            
-            if (!completedOrder.date) {
-                completedOrder.date = new Date().toLocaleDateString('th-TH');
-            }
-
-            history.push(completedOrder);
-            
-            localStorage.setItem('restaurantOrders', JSON.stringify(orders));
-            localStorage.setItem('restaurantHistory', JSON.stringify(history));
-            
-            loadOrders(); 
+        // เวลากดทำอาหารเสร็จ ย้ายข้อมูลจาก Orders ไป History ในฐานข้อมูลออนไลน์
+        function markAsDone(firebaseKey) {
+            database.ref('restaurantOrders/' + firebaseKey).once('value').then((snapshot) => {
+                const completedOrder = snapshot.val();
+                
+                database.ref('restaurantHistory').push(completedOrder).then(() => {
+                    database.ref('restaurantOrders/' + firebaseKey).remove();
+                });
+            });
         }
 
-        function calculateTotals() {
-            let history = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
-            
+        // ฟังก์ชันคำนวณยอดเงิน 
+        function calculateTotals(history) {
             const now = new Date();
             const todayStr = now.toLocaleDateString('th-TH'); 
             const currentMonthStr = todayStr.substring(todayStr.indexOf('/') + 1); 
@@ -259,14 +284,8 @@
 
             history.forEach(order => {
                 const total = Number(order.total) || 0;
-                
-                if (order.date === todayStr) {
-                    dailyTotal += total;
-                }
-                
-                if (order.date && order.date.endsWith(currentMonthStr)) {
-                    monthlyTotal += total;
-                }
+                if (order.date === todayStr) { dailyTotal += total; }
+                if (order.date && order.date.endsWith(currentMonthStr)) { monthlyTotal += total; }
             });
 
             document.getElementById('daily-total').textContent = dailyTotal.toLocaleString() + ' ฿';
@@ -274,22 +293,21 @@
         }
 
         function exportToExcel() {
-            let history = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
-            
+            let history = window.currentHistory || [];
             if (history.length === 0) {
-                openEmptyExcelModal(); // เรียกใช้ Custom Modal แจ้งเตือนแทน alert
+                openEmptyExcelModal();
                 return;
             }
-
+            
             const excelData = history.map(order => {
-                const itemsList = order.items.map(i => `${i.name} (x${i.quantity})`).join(', ');
+                const itemsList = order.items ? order.items.map(i => `${i.name} (x${i.quantity})`).join(', ') : '-';
                 return {
-                    'รหัสออเดอร์': order.id,
+                    'รหัสออเดอร์': order.id || '-',
                     'วันที่': order.date || '-',
-                    'เวลา': order.time,
-                    'เบอร์โต๊ะ': order.table,
+                    'เวลา': order.time || '-',
+                    'เบอร์โต๊ะ': order.table || '-',
                     'รายการอาหาร': itemsList,
-                    'ยอดรวม (บาท)': order.total
+                    'ยอดรวม (บาท)': order.total || 0
                 };
             });
 
@@ -301,38 +319,20 @@
             XLSX.writeFile(workbook, `สรุปยอดขาย_${today}.xlsx`);
         }
 
-        /* --- ฟังก์ชันควบคุม Custom Modals --- */
-        
-        // ควบคุม Modal แจ้งเตือนไม่มีข้อมูล Excel
-        function openEmptyExcelModal() {
-            document.getElementById('empty-excel-modal').style.display = 'flex';
-        }
-        function closeEmptyExcelModal() {
-            document.getElementById('empty-excel-modal').style.display = 'none';
-        }
+        function openEmptyExcelModal() { document.getElementById('empty-excel-modal').style.display = 'flex'; }
+        function closeEmptyExcelModal() { document.getElementById('empty-excel-modal').style.display = 'none'; }
+        function openConfirmModal() { document.getElementById('confirm-modal').style.display = 'flex'; }
+        function closeConfirmModal() { document.getElementById('confirm-modal').style.display = 'none'; }
 
-        // ควบคุม Modal ล้างข้อมูล
-        function openConfirmModal() {
-            document.getElementById('confirm-modal').style.display = 'flex';
-        }
-        function closeConfirmModal() {
-            document.getElementById('confirm-modal').style.display = 'none';
-        }
-
+        // ล้างข้อมูลบนฐานข้อมูลออนไลน์
         function executeClearHistory() {
-            localStorage.removeItem('restaurantHistory');
-            loadOrders();
-            closeConfirmModal();
-            document.getElementById('success-modal').style.display = 'flex';
+            database.ref('restaurantHistory').remove().then(() => {
+                closeConfirmModal();
+                document.getElementById('success-modal').style.display = 'flex';
+            });
         }
 
-        function closeSuccessModal() {
-            document.getElementById('success-modal').style.display = 'none';
-        }
-        /* ------------------------------------------- */
-
-        loadOrders();
-        setInterval(loadOrders, 5000);
+        function closeSuccessModal() { document.getElementById('success-modal').style.display = 'none'; }
 
     </script>
 </body>
