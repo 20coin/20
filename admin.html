@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบหลังร้าน (Admin) - สวนอาหาร 20 เหรียญ</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-color: #f59e0b;
@@ -14,6 +15,7 @@
             --danger-color: #ef4444;
             --success-color: #10b981;
             --border-color: #e5e7eb;
+            --blue-color: #3b82f6;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Kanit', sans-serif; }
@@ -21,30 +23,52 @@
         
         header { 
             background: #1e293b; color: white; padding: 1.2rem 2rem; 
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; justify-content: center; align-items: center; 
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         }
         header h1 { font-size: 1.5rem; color: var(--primary-color); }
-        .refresh-btn { 
-            background: #3b82f6; color: white; border: none; 
-            padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-size: 1rem;
-        }
-        .refresh-btn:hover { background: #2563eb; }
 
         .container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+
+        /* --- ส่วน Dashboard แสดงยอดขายและ Export --- */
+        .dashboard-container {
+            display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;
+            padding-bottom: 2rem; border-bottom: 2px dashed var(--border-color);
+        }
+        .stat-card {
+            background: var(--card-bg); padding: 1.5rem; border-radius: 12px; flex: 1; min-width: 250px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--success-color);
+        }
+        .stat-card.monthly { border-left-color: var(--blue-color); }
+        .stat-card h3 { color: #64748b; font-size: 1.1rem; margin-bottom: 0.5rem; font-weight: 500; }
+        .stat-card .amount { font-size: 2rem; font-weight: 600; color: var(--text-main); }
         
-        .no-orders { text-align: center; color: #64748b; font-size: 1.2rem; margin-top: 3rem; }
+        .action-card {
+            display: flex; flex-direction: column; gap: 0.5rem; justify-content: center; flex: 1; min-width: 250px;
+        }
+        .btn-excel {
+            background: var(--success-color); color: white; border: none; padding: 1rem; border-radius: 8px;
+            font-size: 1.1rem; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s;
+        }
+        .btn-excel:hover { background: #059669; }
+        .btn-clear {
+            background: transparent; color: var(--danger-color); border: 1px solid var(--danger-color);
+            padding: 0.5rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; width: 100%; transition: 0.2s;
+        }
+        .btn-clear:hover { background: #fee2e2; }
+        
+        .section-title { font-size: 1.3rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .no-orders { text-align: center; color: #64748b; font-size: 1.2rem; margin-top: 3rem; background: white; padding: 2rem; border-radius: 12px; }
 
         .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
         
         .order-card { 
             background: var(--card-bg); border-radius: 12px; padding: 1.5rem; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-top: 4px solid var(--primary-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-color);
             display: flex; flex-direction: column;
         }
         .order-header { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
         
-        /* เพิ่มสไตล์สำหรับเบอร์โต๊ะให้เด่นๆ */
         .order-table { font-weight: bold; font-size: 1.3rem; color: var(--primary-color); }
         .order-time { color: #64748b; font-size: 0.9rem; text-align: right; }
         
@@ -56,19 +80,64 @@
         .done-btn { 
             width: 100%; background: var(--success-color); color: white; 
             border: none; padding: 0.8rem; border-radius: 8px; cursor: pointer; 
-            font-size: 1rem; font-weight: 500;
+            font-size: 1rem; font-weight: 500; transition: 0.2s;
         }
         .done-btn:hover { background: #059669; }
+
+        /* --- Custom Modal Style --- */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);
+            justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
+        }
+        .custom-modal {
+            background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 400px;
+            text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .modal-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .custom-modal h2 { color: var(--text-main); margin-bottom: 0.5rem; font-size: 1.5rem; }
+        .custom-modal p { color: #64748b; font-size: 1rem; margin-bottom: 1.5rem; line-height: 1.5; }
+        
+        .modal-actions { display: flex; gap: 1rem; }
+        .modal-btn {
+            flex: 1; padding: 0.8rem; border: none; border-radius: 8px; cursor: pointer; 
+            font-size: 1rem; font-weight: 500; transition: 0.2s;
+        }
+        .btn-cancel-modal { background: #f1f5f9; color: #64748b; }
+        .btn-cancel-modal:hover { background: #e2e8f0; }
+        .btn-confirm-modal { background: var(--danger-color); color: white; }
+        .btn-confirm-modal:hover { background: #dc2626; }
+        .btn-success-modal { background: var(--success-color); color: white; width: 100%; }
+        .btn-success-modal:hover { background: #059669; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>👨‍🍳 ครัวหลังร้าน (รายการสั่งซื้อ)</h1>
-        <button class="refresh-btn" onclick="loadOrders()">อัปเดตข้อมูล (Refresh)</button>
+        <h1>👨‍🍳 ครัวหลังร้าน & สรุปยอดขาย</h1>
     </header>
 
     <div class="container">
+        
+        <div class="dashboard-container">
+            <div class="stat-card">
+                <h3>💵 ยอดขายวันนี้</h3>
+                <div class="amount" id="daily-total">0 ฿</div>
+            </div>
+            <div class="stat-card monthly">
+                <h3>📅 ยอดขายเดือนนี้</h3>
+                <div class="amount" id="monthly-total">0 ฿</div>
+            </div>
+            <div class="action-card">
+                <button class="btn-excel" onclick="exportToExcel()">📥 ดาวน์โหลด Excel (ประวัติทั้งหมด)</button>
+                <button class="btn-clear" onclick="openConfirmModal()">🗑️ ล้างประวัติการขายทั้งหมด</button>
+            </div>
+        </div>
+
+        <h2 class="section-title">🍳 ออเดอร์ที่ต้องทำ (รอเสิร์ฟ)</h2>
         <div id="no-orders-msg" class="no-orders">
             ไม่มีรายการสั่งซื้อเข้ามาในขณะนี้...
         </div>
@@ -77,11 +146,45 @@
             </div>
     </div>
 
+    <div id="empty-excel-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-icon">📁</div>
+            <h2 style="color: var(--primary-color);">ไม่มีข้อมูล</h2>
+            <p>ยังไม่มีประวัติการขายให้ส่งออกครับ</p>
+            <button class="modal-btn btn-cancel-modal" style="width: 100%;" onclick="closeEmptyExcelModal()">ตกลง</button>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-icon">⚠️</div>
+            <h2>ยืนยันการล้างข้อมูล?</h2>
+            <p>คุณแน่ใจหรือไม่ว่าต้องการล้างประวัติการขายทั้งหมด?<br><small style="color:var(--danger-color);">(ยอดขายรายวัน/เดือน จะกลายเป็น 0 และไม่สามารถกู้คืนได้)</small></p>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel-modal" onclick="closeConfirmModal()">ยกเลิก</button>
+                <button class="modal-btn btn-confirm-modal" onclick="executeClearHistory()">ล้างข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-icon">✅</div>
+            <h2 style="color: var(--success-color);">สำเร็จ!</h2>
+            <p>ประวัติการขายถูกล้างเรียบร้อยแล้ว</p>
+            <button class="modal-btn btn-success-modal" onclick="closeSuccessModal()">ตกลง</button>
+        </div>
+    </div>
+
     <script>
         function loadOrders() {
+            renderOrdersGrid();
+            calculateTotals();
+        }
+
+        function renderOrdersGrid() {
             const grid = document.getElementById('order-grid');
             const noOrdersMsg = document.getElementById('no-orders-msg');
-            
             const orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
 
             grid.innerHTML = '';
@@ -105,7 +208,6 @@
                         `;
                     });
 
-                    // 📌 แก้ไขส่วนหัวการ์ดให้โชว์เบอร์โต๊ะตัวใหญ่ๆ
                     card.innerHTML = `
                         <div class="order-header">
                             <div>
@@ -129,10 +231,105 @@
 
         function markAsDone(indexToRemove) {
             let orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
-            orders.splice(indexToRemove, 1);
+            let history = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
+            
+            let completedOrder = orders.splice(indexToRemove, 1)[0];
+            
+            if (!completedOrder.date) {
+                completedOrder.date = new Date().toLocaleDateString('th-TH');
+            }
+
+            history.push(completedOrder);
+            
             localStorage.setItem('restaurantOrders', JSON.stringify(orders));
-            loadOrders();
+            localStorage.setItem('restaurantHistory', JSON.stringify(history));
+            
+            loadOrders(); 
         }
+
+        function calculateTotals() {
+            let history = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
+            
+            const now = new Date();
+            const todayStr = now.toLocaleDateString('th-TH'); 
+            const currentMonthStr = todayStr.substring(todayStr.indexOf('/') + 1); 
+            
+            let dailyTotal = 0;
+            let monthlyTotal = 0;
+
+            history.forEach(order => {
+                const total = Number(order.total) || 0;
+                
+                if (order.date === todayStr) {
+                    dailyTotal += total;
+                }
+                
+                if (order.date && order.date.endsWith(currentMonthStr)) {
+                    monthlyTotal += total;
+                }
+            });
+
+            document.getElementById('daily-total').textContent = dailyTotal.toLocaleString() + ' ฿';
+            document.getElementById('monthly-total').textContent = monthlyTotal.toLocaleString() + ' ฿';
+        }
+
+        function exportToExcel() {
+            let history = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
+            
+            if (history.length === 0) {
+                openEmptyExcelModal(); // เรียกใช้ Custom Modal แจ้งเตือนแทน alert
+                return;
+            }
+
+            const excelData = history.map(order => {
+                const itemsList = order.items.map(i => `${i.name} (x${i.quantity})`).join(', ');
+                return {
+                    'รหัสออเดอร์': order.id,
+                    'วันที่': order.date || '-',
+                    'เวลา': order.time,
+                    'เบอร์โต๊ะ': order.table,
+                    'รายการอาหาร': itemsList,
+                    'ยอดรวม (บาท)': order.total
+                };
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "ประวัติยอดขาย");
+
+            const today = new Date().toLocaleDateString('th-TH').replace(/\//g, '-');
+            XLSX.writeFile(workbook, `สรุปยอดขาย_${today}.xlsx`);
+        }
+
+        /* --- ฟังก์ชันควบคุม Custom Modals --- */
+        
+        // ควบคุม Modal แจ้งเตือนไม่มีข้อมูล Excel
+        function openEmptyExcelModal() {
+            document.getElementById('empty-excel-modal').style.display = 'flex';
+        }
+        function closeEmptyExcelModal() {
+            document.getElementById('empty-excel-modal').style.display = 'none';
+        }
+
+        // ควบคุม Modal ล้างข้อมูล
+        function openConfirmModal() {
+            document.getElementById('confirm-modal').style.display = 'flex';
+        }
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').style.display = 'none';
+        }
+
+        function executeClearHistory() {
+            localStorage.removeItem('restaurantHistory');
+            loadOrders();
+            closeConfirmModal();
+            document.getElementById('success-modal').style.display = 'flex';
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('success-modal').style.display = 'none';
+        }
+        /* ------------------------------------------- */
 
         loadOrders();
         setInterval(loadOrders, 5000);
