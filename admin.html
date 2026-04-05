@@ -182,24 +182,26 @@
         let onlineDatabase = null;
         let refreshInterval;
 
+        // อัปเดตข้อมูล Firebase ของคุณ
         const firebaseConfig = {
-            apiKey: "ใส่_API_KEY_ของคุณ",
-            authDomain: "ใส่_AUTH_DOMAIN_ของคุณ",
-            databaseURL: "ใส่_DATABASE_URL_ของคุณ",
-            projectId: "ใส่_PROJECT_ID_ของคุณ",
-            storageBucket: "ใส่_STORAGE_BUCKET_ของคุณ",
-            messagingSenderId: "ใส่_SENDER_ID_ของคุณ",
-            appId: "ใส่_APP_ID_ของคุณ"
+            apiKey: "AIzaSyA3uA0hPcwrxRWKnfCjS7JYArOkGAY4r3Q",
+            authDomain: "myrestaurant-298ec.firebaseapp.com",
+            databaseURL: "https://myrestaurant-298ec-default-rtdb.firebaseio.com",
+            projectId: "myrestaurant-298ec",
+            storageBucket: "myrestaurant-298ec.firebasestorage.app",
+            messagingSenderId: "297474064110",
+            appId: "1:297474064110:web:1fe0b37b8ec8897e8a7dff"
         };
 
-        // --- เช็คว่าใส่รหัส Firebase จริงหรือยัง ---
-        if (!firebaseConfig.apiKey.includes("ใส่_")) {
+        // เริ่มระบบ Real-time Sync
+        if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("ใส่_")) {
             try {
                 firebase.initializeApp(firebaseConfig);
                 onlineDatabase = firebase.database();
                 isOnlineMode = true;
+                console.log("Admin Mode: ระบบออนไลน์พร้อมรับออเดอร์จากทุกอุปกรณ์");
                 
-                // โหมด Online: ดักฟังออเดอร์แบบ Real-time
+                // ดึงข้อมูลออเดอร์ใหม่แบบ Real-time
                 onlineDatabase.ref('restaurantOrders').on('value', (snapshot) => {
                     const data = snapshot.val();
                     let ordersArray = [];
@@ -207,7 +209,7 @@
                     renderOrdersGrid(ordersArray);
                 });
 
-                // โหมด Online: ดักฟังประวัติการขาย
+                // ดึงประวัติยอดขายแบบ Real-time
                 onlineDatabase.ref('restaurantHistory').on('value', (snapshot) => {
                     const data = snapshot.val();
                     let historyArray = [];
@@ -217,11 +219,10 @@
                 });
 
             } catch (error) {
-                console.error("เชื่อมต่อ Firebase ไม่สำเร็จ กลับไปใช้โหมด Offline", error);
+                console.error("Firebase Error:", error);
                 startOfflineMode();
             }
         } else {
-            console.log("ทำงานในโหมด Offline (ใช้ข้อมูลในเครื่อง)");
             startOfflineMode();
         }
 
@@ -360,7 +361,7 @@
 
             const worksheet = XLSX.utils.json_to_sheet(excelData);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "ประวัติยอดขาย");
+            XLS.utils.book_append_sheet(workbook, worksheet, "ประวัติยอดขาย");
 
             const today = new Date().toLocaleDateString('th-TH').replace(/\//g, '-');
             XLSX.writeFile(workbook, `สรุปยอดขาย_${today}.xlsx`);
