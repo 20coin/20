@@ -178,7 +178,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // 1. ใส่ firebaseConfig ตัวเดียวกันกับหน้า Index เป๊ะๆ ครับ
+        let isOnlineMode = false;
+        let onlineDatabase = null;
+        let refreshInterval;
+
         const firebaseConfig = {
             apiKey: "ใส่_API_KEY_ของคุณ",
             authDomain: "ใส่_AUTH_DOMAIN_ของคุณ",
@@ -189,32 +192,56 @@
             appId: "ใส่_APP_ID_ของคุณ"
         };
 
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+        // --- เช็คว่าใส่รหัส Firebase จริงหรือยัง ---
+        if (!firebaseConfig.apiKey.includes("ใส่_")) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                onlineDatabase = firebase.database();
+                isOnlineMode = true;
+                
+                // โหมด Online: ดักฟังออเดอร์แบบ Real-time
+                onlineDatabase.ref('restaurantOrders').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    let ordersArray = [];
+                    for (let key in data) { ordersArray.push({ firebaseKey: key, ...data[key] }); }
+                    renderOrdersGrid(ordersArray);
+                });
 
-        // 2. ดักฟังข้อมูลแบบ Real-time
-        database.ref('restaurantOrders').on('value', (snapshot) => {
-            const data = snapshot.val();
-            let ordersArray = [];
-            
-            for (let key in data) {
-                ordersArray.push({ firebaseKey: key, ...data[key] });
+                // โหมด Online: ดักฟังประวัติการขาย
+                onlineDatabase.ref('restaurantHistory').on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    let historyArray = [];
+                    for (let key in data) { historyArray.push(data[key]); }
+                    calculateTotals(historyArray);
+                    window.currentHistory = historyArray; 
+                });
+
+            } catch (error) {
+                console.error("เชื่อมต่อ Firebase ไม่สำเร็จ กลับไปใช้โหมด Offline", error);
+                startOfflineMode();
             }
-            
+        } else {
+            console.log("ทำงานในโหมด Offline (ใช้ข้อมูลในเครื่อง)");
+            startOfflineMode();
+        }
+
+        // --- ฟังก์ชันสำหรับการทำงานแบบ Offline (ดึงข้อมูลจาก LocalStorage) ---
+        function startOfflineMode() {
+            isOnlineMode = false;
+            loadOfflineData();
+            // ให้รีเฟรชหน้าจอดึงข้อมูลในเครื่องทุกๆ 3 วินาที
+            refreshInterval = setInterval(loadOfflineData, 3000);
+        }
+
+        function loadOfflineData() {
+            let ordersArray = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
+            let historyArray = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
             renderOrdersGrid(ordersArray);
-        });
-
-        // ดักฟังประวัติการขาย (History) แบบ Real-time
-        database.ref('restaurantHistory').on('value', (snapshot) => {
-            const data = snapshot.val();
-            let historyArray = [];
-            for (let key in data) {
-                historyArray.push(data[key]);
-            }
             calculateTotals(historyArray);
-            window.currentHistory = historyArray; 
-        });
+            window.currentHistory = historyArray;
+        }
 
+        // --- วาดหน้าจอออเดอร์ ---
         function renderOrdersGrid(orders) {
             const grid = document.getElementById('order-grid');
             const noOrdersMsg = document.getElementById('no-orders-msg');
@@ -225,7 +252,7 @@
             } else {
                 noOrdersMsg.style.display = 'none';
                 
-                orders.forEach((order) => {
+                orders.forEach((order, index) => {
                     const card = document.createElement('div');
                     card.className = 'order-card';
                     
@@ -239,6 +266,14 @@
                                 </li>
                             `;
                         });
+                    }
+
+                    // สร้างปุ่ม "ทำเสร็จแล้ว" โดยส่ง ID หรือ Index ขึ้นอยู่กับโหมด
+                    let doneButtonHtml = '';
+                    if (isOnlineMode) {
+                        doneButtonHtml = `<button class="done-btn" onclick="markAsDoneOnline('${order.firebaseKey}')">ทำอาหารเสร็จแล้ว</button>`;
+                    } else {
+                        doneButtonHtml = `<button class="done-btn" onclick="markAsDoneOffline(${index})">ทำอาหารเสร็จแล้ว</button>`;
                     }
 
                     card.innerHTML = `
@@ -255,25 +290,36 @@
                         <div class="order-total">
                             รวม: ${order.total ? order.total.toLocaleString() : 0} ฿
                         </div>
-                        <button class="done-btn" onclick="markAsDone('${order.firebaseKey}')">ทำอาหารเสร็จแล้ว</button>
+                        ${doneButtonHtml}
                     `;
                     grid.appendChild(card);
                 });
             }
         }
 
-        // เวลากดทำอาหารเสร็จ ย้ายข้อมูลจาก Orders ไป History ในฐานข้อมูลออนไลน์
-        function markAsDone(firebaseKey) {
-            database.ref('restaurantOrders/' + firebaseKey).once('value').then((snapshot) => {
+        // --- ฟังก์ชันกดทำเสร็จแล้ว (แยกตามโหมด Online / Offline) ---
+        function markAsDoneOnline(firebaseKey) {
+            onlineDatabase.ref('restaurantOrders/' + firebaseKey).once('value').then((snapshot) => {
                 const completedOrder = snapshot.val();
-                
-                database.ref('restaurantHistory').push(completedOrder).then(() => {
-                    database.ref('restaurantOrders/' + firebaseKey).remove();
+                onlineDatabase.ref('restaurantHistory').push(completedOrder).then(() => {
+                    onlineDatabase.ref('restaurantOrders/' + firebaseKey).remove();
                 });
             });
         }
 
-        // ฟังก์ชันคำนวณยอดเงิน 
+        function markAsDoneOffline(index) {
+            let orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
+            let history = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
+            
+            let completedOrder = orders.splice(index, 1)[0];
+            history.push(completedOrder);
+            
+            localStorage.setItem('restaurantOrders', JSON.stringify(orders));
+            localStorage.setItem('restaurantHistory', JSON.stringify(history));
+            loadOfflineData();
+        }
+
+        // --- ฟังก์ชันคำนวณยอดเงิน ---
         function calculateTotals(history) {
             const now = new Date();
             const todayStr = now.toLocaleDateString('th-TH'); 
@@ -292,6 +338,7 @@
             document.getElementById('monthly-total').textContent = monthlyTotal.toLocaleString() + ' ฿';
         }
 
+        // --- ฟังก์ชัน Export Excel และ ล้างข้อมูล ---
         function exportToExcel() {
             let history = window.currentHistory || [];
             if (history.length === 0) {
@@ -324,12 +371,18 @@
         function openConfirmModal() { document.getElementById('confirm-modal').style.display = 'flex'; }
         function closeConfirmModal() { document.getElementById('confirm-modal').style.display = 'none'; }
 
-        // ล้างข้อมูลบนฐานข้อมูลออนไลน์
         function executeClearHistory() {
-            database.ref('restaurantHistory').remove().then(() => {
+            if (isOnlineMode) {
+                onlineDatabase.ref('restaurantHistory').remove().then(() => {
+                    closeConfirmModal();
+                    document.getElementById('success-modal').style.display = 'flex';
+                });
+            } else {
+                localStorage.removeItem('restaurantHistory');
+                loadOfflineData();
                 closeConfirmModal();
                 document.getElementById('success-modal').style.display = 'flex';
-            });
+            }
         }
 
         function closeSuccessModal() { document.getElementById('success-modal').style.display = 'none'; }
