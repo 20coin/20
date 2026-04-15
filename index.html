@@ -36,6 +36,12 @@
         .category-btn.active { background-color: var(--primary-color); color: white; font-weight: 500; box-shadow: var(--shadow-md); }
 
         .main-content { flex: 1; padding: 2rem; overflow-y: auto; background-color: var(--bg-color); }
+        
+        /* สไตล์สำหรับกล่องค้นหา (เพิ่มใหม่) */
+        .search-container { margin-bottom: 1.5rem; }
+        .search-container input { width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; transition: all 0.2s; background: var(--card-bg); }
+        .search-container input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2); }
+
         .main-content h2 { font-size: 1.6rem; margin-bottom: 1.5rem; color: var(--text-main); font-weight: 600; }
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1.5rem; }
 
@@ -152,6 +158,10 @@
         </aside>
 
         <main class="main-content">
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="🔍 ค้นหาเมนูอาหาร..." oninput="searchMenu()">
+            </div>
+
             <h2 id="current-category-title">ทั้งหมด</h2>
             <div class="menu-grid" id="menu-grid"></div>
         </main>
@@ -267,17 +277,50 @@
             });
         }
 
+        // เพิ่มการล้างช่องค้นหาเมื่อกดเปลี่ยนหมวดหมู่ (อัปเดตใหม่)
         function filterMenu(category, selectedBtn) {
             document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
             if(selectedBtn) selectedBtn.classList.add('active');
             document.getElementById('current-category-title').textContent = category;
+            
+            // ล้างค่าในช่องค้นหาถ้าผู้ใช้กดเลือกหมวดหมู่เอง
+            const searchInput = document.getElementById('search-input');
+            if(searchInput) searchInput.value = '';
+
             const filteredItems = category === 'ทั้งหมด' ? menuData : menuData.filter(item => item.category === category);
             renderMenuItems(filteredItems, category);
+        }
+
+        // ฟังก์ชันสำหรับการค้นหา (เพิ่มใหม่)
+        function searchMenu() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+            const categoryTitle = document.getElementById('current-category-title');
+
+            if (searchTerm === '') {
+                // ถ้าลบคำค้นหาจนว่าง ให้กลับไปหน้า 'ทั้งหมด'
+                const allBtn = document.querySelector('.category-btn'); // ปุ่มแรกคือทั้งหมด
+                filterMenu('ทั้งหมด', allBtn);
+                return;
+            }
+
+            // กรองเมนูที่ชื่อตรงกับคำค้นหา
+            const filteredItems = menuData.filter(item => item.name.toLowerCase().includes(searchTerm));
+
+            // เปลี่ยนหัวข้อเพื่อให้รู้ว่ากำลังแสดงผลการค้นหา
+            categoryTitle.textContent = `🔍 ผลการค้นหา: "${searchTerm}"`;
+
+            // ยกเลิกสถานะ Active ของปุ่มหมวดหมู่ทั้งหมด
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+
+            // เรนเดอร์รายการที่ค้นเจอ โดยส่ง 'search' เป็นหมวดหมู่ เพื่อไม่ให้มันแสดงหัวข้อหมวดหมู่ย่อยๆ
+            renderMenuItems(filteredItems, 'search');
         }
 
         function renderMenuItems(items, currentCategory = 'ทั้งหมด') {
             const grid = document.getElementById('menu-grid');
             grid.innerHTML = '';
+            
+            // ถ้าเป็นการกรองจากหมวดหมู่ทั้งหมด จะมีการแยกกลุ่มตามประเภท
             if (currentCategory === 'ทั้งหมด') {
                 categories.forEach(cat => {
                     if (cat === 'ทั้งหมด') return;
@@ -291,7 +334,13 @@
                     }
                 });
             } else {
+                // ถ้ากดเลือกหมวดหมู่เฉพาะ หรือ กำลังค้นหา (search) ให้แสดงรายการต่อกันเลย
                 items.forEach(item => grid.appendChild(createMenuCard(item)));
+                
+                // แจ้งเตือนหากค้นหาไม่เจอ
+                if (items.length === 0) {
+                    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-muted);">ไม่พบเมนูอาหารที่คุณค้นหา 😅</div>';
+                }
             }
         }
 
@@ -395,12 +444,10 @@
         function closeModal() { document.getElementById('checkout-modal').style.display = 'none'; }
         function closeSuccessModal() { document.getElementById('success-modal').style.display = 'none'; }
 
-        // --- วาดหน้าจอ UI ทันที (แก้ปัญหาจอขาว) ---
         renderCategories();
         renderMenuItems(menuData, 'ทั้งหมด');
         updateCartUI();
 
-        // --- ระบบตั้งค่า Firebase (อัปเดตค่า Config ใหม่แล้ว) ---
         let isOnlineMode = false;
         let onlineDatabase = null;
 
@@ -414,7 +461,6 @@
             appId: "1:297474064110:web:1fe0b37b8ec8897e8a7dff"
         };
 
-        // ตรวจสอบความถูกต้องและเริ่มทำงาน
         try {
             if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("ใส่_")) {
                 firebase.initializeApp(firebaseConfig);
@@ -426,7 +472,6 @@
             console.error("เชื่อมต่อ Firebase ไม่สำเร็จ:", error);
         }
 
-        // --- ระบบส่งคำสั่งซื้อแบบสลับโหมดอัตโนมัติ ---
         function confirmOrder() {
             const tableNumber = document.getElementById('table-number').value;
 
@@ -452,7 +497,6 @@
                 };
 
                 if (isOnlineMode) {
-                    // ทำงานแบบออนไลน์ (ส่งขึ้น Firebase)
                     onlineDatabase.ref('restaurantOrders').push(orderData).then(() => {
                         cart = [];
                         updateCartUI();
@@ -462,7 +506,6 @@
                         alert("เชื่อมต่อฐานข้อมูลไม่ได้ กรุณาลองใหม่ครับ");
                     });
                 } else {
-                    // ทำงานแบบออฟไลน์ (เก็บในเครื่องเดิม) เพื่อไม่ให้จอค้าง
                     let existingOrders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
                     existingOrders.push(orderData);
                     localStorage.setItem('restaurantOrders', JSON.stringify(existingOrders));
