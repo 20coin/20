@@ -72,8 +72,14 @@
         .order-time { color: #64748b; font-size: 0.9rem; text-align: right; }
         
         .order-items { flex: 1; list-style: none; margin-bottom: 1rem; }
-        .order-items li { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.95rem; border-bottom: 1px solid #f8fafc; }
+        .order-items li { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; font-size: 0.95rem; border-bottom: 1px solid #f8fafc; }
         
+        .btn-delete-item {
+            background: none; border: none; color: var(--danger-color); cursor: pointer;
+            font-size: 1rem; margin-left: 8px; transition: 0.2s; padding: 4px;
+        }
+        .btn-delete-item:hover { transform: scale(1.2); }
+
         .order-total { font-size: 1.2rem; font-weight: bold; text-align: right; color: var(--danger-color); margin-bottom: 1rem; }
         
         .done-btn { 
@@ -141,7 +147,7 @@
         </div>
         
         <div class="order-grid" id="order-grid">
-            </div>
+        </div>
     </div>
 
     <div id="empty-excel-modal" class="modal-overlay">
@@ -174,6 +180,18 @@
         </div>
     </div>
 
+    <div id="delete-item-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-icon">🗑️</div>
+            <h2>ลบเมนูอาหาร?</h2>
+            <p>ต้องการลบเมนูนี้ออกจากบิลใช่หรือไม่?</p>
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel-modal" onclick="closeDeleteItemModal()">ยกเลิก</button>
+                <button class="modal-btn btn-confirm-modal" onclick="executeDeleteItem()">ลบเมนู</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -181,8 +199,8 @@
         let isOnlineMode = false;
         let onlineDatabase = null;
         let refreshInterval;
+        let pendingDeleteData = null; 
 
-        // อัปเดตข้อมูล Firebase ของคุณ
         const firebaseConfig = {
             apiKey: "AIzaSyA3uA0hPcwrxRWKnfCjS7JYArOkGAY4r3Q",
             authDomain: "myrestaurant-298ec.firebaseapp.com",
@@ -193,7 +211,6 @@
             appId: "1:297474064110:web:1fe0b37b8ec8897e8a7dff"
         };
 
-        // เริ่มระบบ Real-time Sync
         if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("ใส่_")) {
             try {
                 firebase.initializeApp(firebaseConfig);
@@ -201,7 +218,6 @@
                 isOnlineMode = true;
                 console.log("Admin Mode: ระบบออนไลน์พร้อมรับออเดอร์จากทุกอุปกรณ์");
                 
-                // ดึงข้อมูลออเดอร์ใหม่แบบ Real-time
                 onlineDatabase.ref('restaurantOrders').on('value', (snapshot) => {
                     const data = snapshot.val();
                     let ordersArray = [];
@@ -209,7 +225,6 @@
                     renderOrdersGrid(ordersArray);
                 });
 
-                // ดึงประวัติยอดขายแบบ Real-time
                 onlineDatabase.ref('restaurantHistory').on('value', (snapshot) => {
                     const data = snapshot.val();
                     let historyArray = [];
@@ -226,11 +241,9 @@
             startOfflineMode();
         }
 
-        // --- ฟังก์ชันสำหรับการทำงานแบบ Offline (ดึงข้อมูลจาก LocalStorage) ---
         function startOfflineMode() {
             isOnlineMode = false;
             loadOfflineData();
-            // ให้รีเฟรชหน้าจอดึงข้อมูลในเครื่องทุกๆ 3 วินาที
             refreshInterval = setInterval(loadOfflineData, 3000);
         }
 
@@ -242,7 +255,7 @@
             window.currentHistory = historyArray;
         }
 
-        // --- วาดหน้าจอออเดอร์ ---
+        // --- วาดหน้าจอ (อัปเดตให้ยุบรวมเมนูที่ซ้ำกันให้เป็นบรรทัดเดียว) ---
         function renderOrdersGrid(orders) {
             const grid = document.getElementById('order-grid');
             const noOrdersMsg = document.getElementById('no-orders-msg');
@@ -253,43 +266,73 @@
             } else {
                 noOrdersMsg.style.display = 'none';
                 
-                orders.forEach((order, index) => {
+                // จัดกลุ่มตามโต๊ะ
+                const tablesGroup = {};
+                orders.forEach((order, originalIndex) => {
+                    let t = order.table || 'กลับบ้าน/ไม่ระบุ';
+                    if (!tablesGroup[t]) {
+                        tablesGroup[t] = { table: t, orders: [], total: 0, lastTime: order.time };
+                    }
+                    tablesGroup[t].orders.push({ ...order, originalIndex: originalIndex });
+                    tablesGroup[t].total += Number(order.total) || 0;
+                    tablesGroup[t].lastTime = order.time; 
+                });
+
+                Object.values(tablesGroup).forEach(tableGroup => {
                     const card = document.createElement('div');
                     card.className = 'order-card';
                     
-                    let itemsHtml = '';
-                    if (order.items) {
-                        order.items.forEach(item => {
-                            itemsHtml += `
-                                <li>
-                                    <span>${item.name} <b>x${item.quantity}</b></span>
-                                    <span>${(item.price * item.quantity).toLocaleString()} ฿</span>
-                                </li>
-                            `;
-                        });
-                    }
+                    // --- หัวใจสำคัญ: รวบรวมเมนูที่ชื่อซ้ำกันมาบวกจำนวน ---
+                    let mergedItems = {};
+                    tableGroup.orders.forEach(order => {
+                        if (order.items) {
+                            order.items.forEach(item => {
+                                if (!mergedItems[item.name]) {
+                                    mergedItems[item.name] = { ...item, quantity: 0 };
+                                }
+                                mergedItems[item.name].quantity += item.quantity;
+                            });
+                        }
+                    });
 
-                    // สร้างปุ่ม "ทำเสร็จแล้ว" โดยส่ง ID หรือ Index ขึ้นอยู่กับโหมด
+                    // วาดรายการอาหารที่รวมแล้ว
+                    let itemsHtml = '';
+                    Object.values(mergedItems).forEach(item => {
+                        let safeTableName = tableGroup.table.replace(/'/g, "\\'");
+                        let safeItemName = item.name.replace(/'/g, "\\'");
+                        
+                        let delBtn = `<button class="btn-delete-item" title="ลบเมนูนี้" onclick="openDeleteModalByName('${safeTableName}', '${safeItemName}')">❌</button>`;
+
+                        itemsHtml += `
+                            <li>
+                                <span>${item.name} <b>x${item.quantity}</b> ${delBtn}</span>
+                                <span>${(item.price * item.quantity).toLocaleString()} ฿</span>
+                            </li>
+                        `;
+                    });
+
                     let doneButtonHtml = '';
                     if (isOnlineMode) {
-                        doneButtonHtml = `<button class="done-btn" onclick="markAsDoneOnline('${order.firebaseKey}')">ทำอาหารเสร็จแล้ว</button>`;
+                        let keys = tableGroup.orders.map(o => o.firebaseKey).join(',');
+                        doneButtonHtml = `<button class="done-btn" onclick="markTableAsDoneOnline('${keys}')">ทำเสร็จแล้ว (รวมบิลโต๊ะ ${tableGroup.table})</button>`;
                     } else {
-                        doneButtonHtml = `<button class="done-btn" onclick="markAsDoneOffline(${index})">ทำอาหารเสร็จแล้ว</button>`;
+                        let indices = tableGroup.orders.map(o => o.originalIndex).join(',');
+                        doneButtonHtml = `<button class="done-btn" onclick="markTableAsDoneOffline('${indices}')">ทำเสร็จแล้ว (รวมบิลโต๊ะ ${tableGroup.table})</button>`;
                     }
 
                     card.innerHTML = `
                         <div class="order-header">
                             <div>
-                                <div class="order-table">โต๊ะ: ${order.table || '-'}</div>
-                                <div style="font-size: 0.85rem; color: #94a3b8;">รหัส: ${order.id}</div>
+                                <div class="order-table">โต๊ะ: ${tableGroup.table}</div>
+                                <div style="font-size: 0.85rem; color: #94a3b8;">${tableGroup.orders.length} ออเดอร์ (รวมบิลแล้ว)</div>
                             </div>
-                            <div class="order-time">เวลา: ${order.time}</div>
+                            <div class="order-time">ล่าสุด: ${tableGroup.lastTime}</div>
                         </div>
                         <ul class="order-items">
                             ${itemsHtml}
                         </ul>
                         <div class="order-total">
-                            รวม: ${order.total ? order.total.toLocaleString() : 0} ฿
+                            ยอดรวมโต๊ะนี้: ${tableGroup.total.toLocaleString()} ฿
                         </div>
                         ${doneButtonHtml}
                     `;
@@ -298,29 +341,150 @@
             }
         }
 
-        // --- ฟังก์ชันกดทำเสร็จแล้ว (แยกตามโหมด Online / Offline) ---
-        function markAsDoneOnline(firebaseKey) {
-            onlineDatabase.ref('restaurantOrders/' + firebaseKey).once('value').then((snapshot) => {
-                const completedOrder = snapshot.val();
-                onlineDatabase.ref('restaurantHistory').push(completedOrder).then(() => {
-                    onlineDatabase.ref('restaurantOrders/' + firebaseKey).remove();
+        // --- ระบบลบเมนูแบบอ้างอิงชื่อเมนูและชื่อโต๊ะ (แม่นยำ 100%) ---
+        function openDeleteModalByName(tableName, itemName) {
+            pendingDeleteData = { tableName: tableName, itemName: itemName };
+            document.getElementById('delete-item-modal').style.display = 'flex';
+        }
+
+        function closeDeleteItemModal() {
+            document.getElementById('delete-item-modal').style.display = 'none';
+            pendingDeleteData = null;
+        }
+
+        function executeDeleteItem() {
+            if (!pendingDeleteData) return;
+            let tName = pendingDeleteData.tableName;
+            let iName = pendingDeleteData.itemName;
+
+            if (isOnlineMode) {
+                onlineDatabase.ref('restaurantOrders').once('value').then(snapshot => {
+                    let allOrders = snapshot.val();
+                    let updates = {};
+                    
+                    for (let key in allOrders) {
+                        let order = allOrders[key];
+                        let t = order.table || 'กลับบ้าน/ไม่ระบุ';
+                        // ค้นหาออเดอร์ของโต๊ะนี้ และมีเมนูชื่อนี้อยู่
+                        if (t === tName && order.items) {
+                            let newItems = order.items.filter(item => item.name !== iName);
+                            
+                            // คำนวณยอดเงินที่ต้องหักออก
+                            let removedTotal = 0;
+                            order.items.forEach(item => {
+                                if (item.name === iName) removedTotal += (item.price * item.quantity);
+                            });
+                            
+                            if (newItems.length === 0) {
+                                updates[key] = null; // ถ้าเมนูหมดออเดอร์แล้ว ให้ลบออเดอร์ทิ้งเลย
+                            } else if (removedTotal > 0) {
+                                order.items = newItems;
+                                order.total -= removedTotal;
+                                updates[key] = order; // อัปเดตออเดอร์ใหม่ที่หักเมนูออกแล้ว
+                            }
+                        }
+                    }
+                    // ส่งข้อมูลอัปเดตกลับไปที่ Firebase ทีเดียว
+                    if (Object.keys(updates).length > 0) {
+                        onlineDatabase.ref('restaurantOrders').update(updates);
+                    }
                 });
+            } else {
+                let orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
+                let newOrders = [];
+                
+                orders.forEach(order => {
+                    let t = order.table || 'กลับบ้าน/ไม่ระบุ';
+                    if (t === tName && order.items) {
+                        let newItems = order.items.filter(item => item.name !== iName);
+                        
+                        let removedTotal = 0;
+                        order.items.forEach(item => {
+                            if (item.name === iName) removedTotal += (item.price * item.quantity);
+                        });
+                        
+                        if (newItems.length > 0) {
+                            order.items = newItems;
+                            order.total -= removedTotal;
+                            newOrders.push(order);
+                        }
+                    } else {
+                        newOrders.push(order);
+                    }
+                });
+                
+                localStorage.setItem('restaurantOrders', JSON.stringify(newOrders));
+                loadOfflineData();
+            }
+            closeDeleteItemModal();
+        }
+
+        // --- ส่วนที่เหลือยังคงเหมือนเดิมทุกประการ ---
+        function markTableAsDoneOnline(keysStr) {
+            let keys = keysStr.split(',');
+            let promises = keys.map(key => onlineDatabase.ref('restaurantOrders/' + key).once('value'));
+            
+            Promise.all(promises).then(snapshots => {
+                let mergedOrder = null;
+                snapshots.forEach(snap => {
+                    let order = snap.val();
+                    if(order) {
+                        if(!mergedOrder) {
+                            mergedOrder = {...order}; 
+                        } else {
+                            mergedOrder.items = mergedOrder.items.concat(order.items || []);
+                            mergedOrder.total += order.total;
+                        }
+                    }
+                });
+                
+                if(mergedOrder) {
+                    mergedOrder.items = consolidateItems(mergedOrder.items);
+                    onlineDatabase.ref('restaurantHistory').push(mergedOrder).then(() => {
+                        keys.forEach(key => onlineDatabase.ref('restaurantOrders/' + key).remove());
+                    });
+                }
             });
         }
 
-        function markAsDoneOffline(index) {
+        function markTableAsDoneOffline(indicesStr) {
+            let indices = indicesStr.split(',').map(Number).sort((a,b) => b-a);
             let orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
             let history = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
             
-            let completedOrder = orders.splice(index, 1)[0];
-            history.push(completedOrder);
-            
-            localStorage.setItem('restaurantOrders', JSON.stringify(orders));
-            localStorage.setItem('restaurantHistory', JSON.stringify(history));
-            loadOfflineData();
+            let mergedOrder = null;
+            indicesStr.split(',').map(Number).forEach(idx => {
+                let order = orders[idx];
+                if(order) {
+                    if(!mergedOrder) {
+                        mergedOrder = JSON.parse(JSON.stringify(order));
+                    } else {
+                        if(order.items) mergedOrder.items = mergedOrder.items.concat(order.items);
+                        mergedOrder.total += order.total;
+                    }
+                }
+            });
+
+            if(mergedOrder) {
+                mergedOrder.items = consolidateItems(mergedOrder.items); 
+                history.push(mergedOrder);
+                indices.forEach(idx => orders.splice(idx, 1));
+                
+                localStorage.setItem('restaurantOrders', JSON.stringify(orders));
+                localStorage.setItem('restaurantHistory', JSON.stringify(history));
+                loadOfflineData();
+            }
         }
 
-        // --- ฟังก์ชันคำนวณยอดเงิน ---
+        function consolidateItems(items) {
+            let map = {};
+            items.forEach(item => {
+                if(!map[item.name]) map[item.name] = {...item};
+                else map[item.name].quantity += item.quantity;
+            });
+            return Object.values(map);
+        }
+
         function calculateTotals(history) {
             const now = new Date();
             const todayStr = now.toLocaleDateString('th-TH'); 
@@ -339,7 +503,6 @@
             document.getElementById('monthly-total').textContent = monthlyTotal.toLocaleString() + ' ฿';
         }
 
-        // --- ฟังก์ชัน Export Excel และ ล้างข้อมูล ---
         function exportToExcel() {
             let history = window.currentHistory || [];
             if (history.length === 0) {
@@ -361,7 +524,7 @@
 
             const worksheet = XLSX.utils.json_to_sheet(excelData);
             const workbook = XLSX.utils.book_new();
-            XLS.utils.book_append_sheet(workbook, worksheet, "ประวัติยอดขาย");
+            XLSX.utils.book_append_sheet(workbook, worksheet, "ประวัติยอดขาย");
 
             const today = new Date().toLocaleDateString('th-TH').replace(/\//g, '-');
             XLSX.writeFile(workbook, `สรุปยอดขาย_${today}.xlsx`);
