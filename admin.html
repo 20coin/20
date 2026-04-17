@@ -8,114 +8,196 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
+            /* โทนสีใหม่ ดูโมเดิร์นขึ้น */
             --primary-color: #f59e0b;
-            --bg-color: #f1f5f9;
+            --primary-hover: #d97706;
+            --bg-color: #f8fafc;
             --card-bg: #ffffff;
-            --text-main: #1f2937;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
             --danger-color: #ef4444;
+            --danger-hover: #dc2626;
             --success-color: #10b981;
-            --border-color: #e5e7eb;
+            --success-hover: #059669;
+            --border-color: #e2e8f0;
             --blue-color: #3b82f6;
+            --blue-hover: #2563eb;
+            /* แสงเงาแบบนุ่มนวล */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Kanit', sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); }
         
-        header { 
-            background: #1e293b; color: white; padding: 1.2rem 2rem; 
-            display: flex; justify-content: center; align-items: center; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-        header h1 { font-size: 1.5rem; color: var(--primary-color); }
+        /* สกอร์บาร์สวยๆ */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .container { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+        header { 
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); 
+            color: white; 
+            padding: 1.5rem 2rem; 
+            display: flex; justify-content: center; align-items: center; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            position: sticky; top: 0; z-index: 10;
+        }
+        header h1 { font-size: 1.6rem; color: var(--primary-color); text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+
+        .container { padding: 2.5rem 2rem; max-width: 1200px; margin: 0 auto; }
 
         .dashboard-container {
-            display: flex; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;
-            padding-bottom: 2rem; border-bottom: 2px dashed var(--border-color);
+            display: flex; gap: 1.5rem; margin-bottom: 2.5rem; flex-wrap: wrap;
+            padding-bottom: 2.5rem; border-bottom: 2px dashed #cbd5e1;
         }
         .stat-card {
-            background: var(--card-bg); padding: 1.5rem; border-radius: 12px; flex: 1; min-width: 250px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--success-color);
+            background: var(--card-bg); padding: 1.8rem; border-radius: 16px; flex: 1; min-width: 250px;
+            box-shadow: var(--shadow-md); border-left: 6px solid var(--success-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
         .stat-card.monthly { border-left-color: var(--blue-color); }
-        .stat-card h3 { color: #64748b; font-size: 1.1rem; margin-bottom: 0.5rem; font-weight: 500; }
-        .stat-card .amount { font-size: 2rem; font-weight: 600; color: var(--text-main); }
+        .stat-card h3 { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 0.5rem; font-weight: 500; }
+        .stat-card .amount { font-size: 2.5rem; font-weight: 600; color: var(--text-main); letter-spacing: -0.5px; }
         
         .action-card {
-            display: flex; flex-direction: column; gap: 0.5rem; justify-content: center; flex: 1; min-width: 250px;
+            display: flex; flex-direction: column; gap: 0.8rem; justify-content: center; flex: 1; min-width: 250px;
         }
+        
+        /* ปุ่มสไตล์โมเดิร์น มี Gradient และเงา */
+        .btn-merge {
+            background: linear-gradient(135deg, var(--blue-color) 0%, #60a5fa 100%);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            color: white; border: none; padding: 1.1rem; border-radius: 12px;
+            font-size: 1.1rem; cursor: pointer; font-weight: 500; width: 100%; transition: all 0.2s;
+        }
+        .btn-merge:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4); filter: brightness(1.05); }
+        .btn-merge:active { transform: translateY(0); }
+
         .btn-excel {
-            background: var(--success-color); color: white; border: none; padding: 1rem; border-radius: 8px;
-            font-size: 1.1rem; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s;
+            background: linear-gradient(135deg, var(--success-color) 0%, #34d399 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            color: white; border: none; padding: 1.1rem; border-radius: 12px;
+            font-size: 1.1rem; cursor: pointer; font-weight: 500; width: 100%; transition: all 0.2s;
         }
-        .btn-excel:hover { background: #059669; }
+        .btn-excel:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4); filter: brightness(1.05); }
+        .btn-excel:active { transform: translateY(0); }
+
         .btn-clear {
-            background: transparent; color: var(--danger-color); border: 1px solid var(--danger-color);
-            padding: 0.5rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; width: 100%; transition: 0.2s;
+            background: #fef2f2; color: var(--danger-color); border: 1px solid #fca5a5;
+            padding: 0.8rem; border-radius: 12px; cursor: pointer; font-size: 1rem; width: 100%; transition: all 0.2s; font-weight: 500;
         }
-        .btn-clear:hover { background: #fee2e2; }
+        .btn-clear:hover { background: #fee2e2; border-color: var(--danger-color); transform: translateY(-1px); }
         
-        .section-title { font-size: 1.3rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-        .no-orders { text-align: center; color: #64748b; font-size: 1.2rem; margin-top: 3rem; background: white; padding: 2rem; border-radius: 12px; }
+        .section-title { font-size: 1.4rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main); font-weight: 600;}
+        .no-orders { text-align: center; color: var(--text-muted); font-size: 1.2rem; margin-top: 3rem; background: transparent; padding: 3rem; border-radius: 16px; border: 2px dashed #cbd5e1; }
 
-        .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.8rem; }
         
+        /* การ์ดออเดอร์ */
         .order-card { 
-            background: var(--card-bg); border-radius: 12px; padding: 1.5rem; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid var(--primary-color);
-            display: flex; flex-direction: column;
+            background: var(--card-bg); border-radius: 16px; padding: 1.8rem; 
+            box-shadow: var(--shadow-md); border-top: 5px solid var(--primary-color);
+            display: flex; flex-direction: column; transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative; overflow: hidden;
         }
-        .order-header { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .order-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
         
-        .order-table { font-weight: bold; font-size: 1.3rem; color: var(--primary-color); }
-        .order-time { color: #64748b; font-size: 0.9rem; text-align: right; }
+        .order-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 1.2rem; }
+        .order-table { font-weight: 600; font-size: 1.4rem; color: var(--primary-color); }
+        .order-time { color: var(--text-muted); font-size: 0.95rem; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; }
         
-        .order-items { flex: 1; list-style: none; margin-bottom: 1rem; }
-        .order-items li { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; font-size: 0.95rem; border-bottom: 1px solid #f8fafc; }
+        .order-items { flex: 1; list-style: none; margin-bottom: 1.5rem; }
+        .order-items li { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; font-size: 1.05rem; border-bottom: 1px dashed #e2e8f0; }
+        .order-items li:last-child { border-bottom: none; }
         
-        .btn-delete-item {
-            background: none; border: none; color: var(--danger-color); cursor: pointer;
-            font-size: 1rem; margin-left: 8px; transition: 0.2s; padding: 4px;
+        /* ดีไซน์ปุ่มเพิ่ม/ลด ใหม่ ดูคลีนๆ */
+        .qty-control {
+            display: inline-flex; align-items: center; background: #f8fafc;
+            border-radius: 8px; padding: 4px; gap: 4px; border: 1px solid #e2e8f0;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
-        .btn-delete-item:hover { transform: scale(1.2); }
+        .qty-btn {
+            background: #ffffff; border: 1px solid #cbd5e1; color: var(--text-main);
+            width: 28px; height: 28px; display: flex; justify-content: center; align-items: center;
+            border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1.2rem;
+            transition: all 0.2s; box-shadow: var(--shadow-sm);
+        }
+        .qty-btn:hover { background: #f1f5f9; border-color: #94a3b8; transform: scale(1.05); }
+        .qty-btn:active { transform: scale(0.95); }
+        .qty-val { font-weight: 600; min-width: 24px; text-align: center; font-size: 1.05rem; color: var(--blue-color); }
 
-        .order-total { font-size: 1.2rem; font-weight: bold; text-align: right; color: var(--danger-color); margin-bottom: 1rem; }
+        .btn-delete-item {
+            background: #fef2f2; border: 1px solid #fecaca; color: var(--danger-color); cursor: pointer;
+            width: 32px; height: 32px; border-radius: 8px; display: flex; justify-content: center; align-items: center;
+            font-size: 0.9rem; margin-left: 12px; transition: all 0.2s;
+        }
+        .btn-delete-item:hover { background: var(--danger-color); color: white; transform: rotate(90deg); border-color: var(--danger-color);}
+
+        .order-total { font-size: 1.3rem; font-weight: 600; text-align: right; color: var(--text-main); margin-bottom: 1.2rem; padding-top: 1rem; border-top: 2px solid #f1f5f9; }
+        .order-total span { color: var(--danger-color); font-size: 1.5rem;}
         
         .done-btn { 
-            width: 100%; background: var(--success-color); color: white; 
-            border: none; padding: 0.8rem; border-radius: 8px; cursor: pointer; 
-            font-size: 1rem; font-weight: 500; transition: 0.2s;
+            width: 100%; background: linear-gradient(135deg, var(--success-color) 0%, #34d399 100%); 
+            color: white; border: none; padding: 1rem; border-radius: 12px; cursor: pointer; 
+            font-size: 1.1rem; font-weight: 500; transition: all 0.2s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
         }
-        .done-btn:hover { background: #059669; }
+        .done-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3); filter: brightness(1.05); }
+        .done-btn:active { transform: translateY(0); }
 
+        /* หน้าต่าง Modal แบบ Glassmorphism เบาๆ */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(6px);
             justify-content: center; align-items: center; z-index: 1000; padding: 1rem;
+            animation: fadeIn 0.2s ease-out forwards;
         }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
         .custom-modal {
-            background: white; padding: 2rem; border-radius: 16px; width: 100%; max-width: 400px;
-            text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            background: white; padding: 2.5rem; border-radius: 20px; width: 100%; max-width: 420px;
+            text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; border: 1px solid #e2e8f0;
         }
-        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes popIn { 0% { transform: scale(0.9) translateY(10px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
         
-        .modal-icon { font-size: 4rem; margin-bottom: 1rem; }
-        .custom-modal h2 { color: var(--text-main); margin-bottom: 0.5rem; font-size: 1.5rem; }
-        .custom-modal p { color: #64748b; font-size: 1rem; margin-bottom: 1.5rem; line-height: 1.5; }
+        .modal-icon { font-size: 4.5rem; margin-bottom: 1rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
+        .custom-modal h2 { color: var(--text-main); margin-bottom: 0.8rem; font-size: 1.6rem; font-weight: 600; }
+        .custom-modal p { color: var(--text-muted); font-size: 1.05rem; margin-bottom: 1.8rem; line-height: 1.5; }
         
         .modal-actions { display: flex; gap: 1rem; }
         .modal-btn {
-            flex: 1; padding: 0.8rem; border: none; border-radius: 8px; cursor: pointer; 
-            font-size: 1rem; font-weight: 500; transition: 0.2s;
+            flex: 1; padding: 1rem; border: none; border-radius: 12px; cursor: pointer; 
+            font-size: 1.05rem; font-weight: 500; transition: all 0.2s;
         }
-        .btn-cancel-modal { background: #f1f5f9; color: #64748b; }
-        .btn-cancel-modal:hover { background: #e2e8f0; }
-        .btn-confirm-modal { background: var(--danger-color); color: white; }
-        .btn-confirm-modal:hover { background: #dc2626; }
-        .btn-success-modal { background: var(--success-color); color: white; width: 100%; }
-        .btn-success-modal:hover { background: #059669; }
+        .btn-cancel-modal { background: #f1f5f9; color: var(--text-muted); }
+        .btn-cancel-modal:hover { background: #e2e8f0; color: var(--text-main); }
+        .btn-confirm-modal { background: var(--danger-color); color: white; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+        .btn-confirm-modal:hover { background: var(--danger-hover); box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4); transform: translateY(-2px); }
+        .btn-success-modal { background: var(--success-color); color: white; width: 100%; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+        .btn-success-modal:hover { background: var(--success-hover); box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4); transform: translateY(-2px); }
+
+        /* ดีไซน์ Checkbox ใน Modal */
+        .checkbox-label {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 1.15rem; cursor: pointer;
+            padding: 14px 16px; background: white; border-radius: 12px; border: 2px solid #e2e8f0;
+            transition: all 0.2s ease; box-shadow: var(--shadow-sm);
+        }
+        .checkbox-label:hover { border-color: #cbd5e1; background: #f8fafc; transform: translateX(4px); }
+        .checkbox-label input { width: 22px; height: 22px; cursor: pointer; accent-color: var(--blue-color); }
+        
+        /* สไตล์สำหรับปุ่มกดรวมบิลใน Modal */
+        .btn-modal-merge {
+            background: linear-gradient(135deg, var(--blue-color) 0%, #60a5fa 100%);
+            color: white; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        .btn-modal-merge:hover {
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4); filter: brightness(1.05); transform: translateY(-2px);
+        }
+
     </style>
 </head>
 <body>
@@ -136,6 +218,7 @@
                 <div class="amount" id="monthly-total">0 ฿</div>
             </div>
             <div class="action-card">
+                <button class="btn-merge" onclick="openMergeModal()">🔄 รวมโต๊ะ / รวมบิล</button>
                 <button class="btn-excel" onclick="exportToExcel()">📥 ดาวน์โหลด Excel (ประวัติทั้งหมด)</button>
                 <button class="btn-clear" onclick="openConfirmModal()">🗑️ ล้างประวัติการขายทั้งหมด</button>
             </div>
@@ -147,6 +230,22 @@
         </div>
         
         <div class="order-grid" id="order-grid">
+        </div>
+    </div>
+
+    <div id="merge-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-icon">🔄</div>
+            <h2 style="color: var(--blue-color);">เลือกรวมบิล</h2>
+            <p style="margin-bottom: 1.5rem;">เลือกบิลที่ต้องการนำมารวมเข้าด้วยกัน</p>
+            
+            <div id="merge-checkboxes" style="text-align: left; margin-bottom: 1.8rem; max-height: 220px; overflow-y: auto; padding-right: 8px;">
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn btn-cancel-modal" onclick="closeMergeModal()">ยกเลิก</button>
+                <button class="modal-btn btn-modal-merge" onclick="executeMerge()">รวมบิล</button>
+            </div>
         </div>
     </div>
 
@@ -200,6 +299,9 @@
         let onlineDatabase = null;
         let refreshInterval;
         let pendingDeleteData = null; 
+        
+        // เก็บรายการบิลที่ยังไม่เสร็จ (แยกทีละบิลตามจริง)
+        window.activeOrdersList = [];
 
         const firebaseConfig = {
             apiKey: "AIzaSyA3uA0hPcwrxRWKnfCjS7JYArOkGAY4r3Q",
@@ -255,8 +357,12 @@
             window.currentHistory = historyArray;
         }
 
-        // --- วาดหน้าจอ (อัปเดตให้ยุบรวมเมนูที่ซ้ำกันให้เป็นบรรทัดเดียว) ---
+        // ----------------------------------------------------
+        // ส่วนวาดหน้าจอ (บิลใครบิลมัน ไม่มีการมัดรวมอัตโนมัติ)
+        // ----------------------------------------------------
         function renderOrdersGrid(orders) {
+            window.activeOrdersList = orders; 
+
             const grid = document.getElementById('order-grid');
             const noOrdersMsg = document.getElementById('no-orders-msg');
             grid.innerHTML = '';
@@ -266,73 +372,55 @@
             } else {
                 noOrdersMsg.style.display = 'none';
                 
-                // จัดกลุ่มตามโต๊ะ
-                const tablesGroup = {};
-                orders.forEach((order, originalIndex) => {
-                    let t = order.table || 'กลับบ้าน/ไม่ระบุ';
-                    if (!tablesGroup[t]) {
-                        tablesGroup[t] = { table: t, orders: [], total: 0, lastTime: order.time };
-                    }
-                    tablesGroup[t].orders.push({ ...order, originalIndex: originalIndex });
-                    tablesGroup[t].total += Number(order.total) || 0;
-                    tablesGroup[t].lastTime = order.time; 
-                });
-
-                Object.values(tablesGroup).forEach(tableGroup => {
+                // วนลูปวาดแยกทีละบิล ตรงไปตรงมา (1 ออเดอร์ = 1 การ์ด)
+                orders.forEach((order, index) => {
                     const card = document.createElement('div');
                     card.className = 'order-card';
                     
-                    // --- หัวใจสำคัญ: รวบรวมเมนูที่ชื่อซ้ำกันมาบวกจำนวน ---
-                    let mergedItems = {};
-                    tableGroup.orders.forEach(order => {
-                        if (order.items) {
-                            order.items.forEach(item => {
-                                if (!mergedItems[item.name]) {
-                                    mergedItems[item.name] = { ...item, quantity: 0 };
-                                }
-                                mergedItems[item.name].quantity += item.quantity;
-                            });
-                        }
-                    });
-
-                    // วาดรายการอาหารที่รวมแล้ว
                     let itemsHtml = '';
-                    Object.values(mergedItems).forEach(item => {
-                        let safeTableName = tableGroup.table.replace(/'/g, "\\'");
-                        let safeItemName = item.name.replace(/'/g, "\\'");
-                        
-                        let delBtn = `<button class="btn-delete-item" title="ลบเมนูนี้" onclick="openDeleteModalByName('${safeTableName}', '${safeItemName}')">❌</button>`;
+                    let isOnlineStr = isOnlineMode ? 'true' : 'false';
+                    let orderIdParam = isOnlineMode ? `'${order.firebaseKey}'` : index;
 
-                        itemsHtml += `
-                            <li>
-                                <span>${item.name} <b>x${item.quantity}</b> ${delBtn}</span>
-                                <span>${(item.price * item.quantity).toLocaleString()} ฿</span>
-                            </li>
-                        `;
-                    });
+                    if (order.items) {
+                        order.items.forEach((item, itemIdx) => {
+                            let delBtn = `<button class="btn-delete-item" title="ลบเมนูนี้" onclick="openDeleteItemModal(${orderIdParam}, ${itemIdx}, ${isOnlineStr})">❌</button>`;
+
+                            // ใส่ปุ่ม + / - ในทุกๆ เมนู
+                            itemsHtml += `
+                                <li>
+                                    <div style="flex: 1; min-width: 100px;">${item.name}</div>
+                                    <div class="qty-control">
+                                        <button class="qty-btn" onclick="updateQty(${orderIdParam}, ${itemIdx}, -1, ${isOnlineStr})">-</button>
+                                        <span class="qty-val">${item.quantity}</span>
+                                        <button class="qty-btn" onclick="updateQty(${orderIdParam}, ${itemIdx}, 1, ${isOnlineStr})">+</button>
+                                    </div>
+                                    <div style="width: 70px; text-align: right; font-weight: 500;">${(item.price * item.quantity).toLocaleString()} ฿</div>
+                                    ${delBtn}
+                                </li>
+                            `;
+                        });
+                    }
 
                     let doneButtonHtml = '';
                     if (isOnlineMode) {
-                        let keys = tableGroup.orders.map(o => o.firebaseKey).join(',');
-                        doneButtonHtml = `<button class="done-btn" onclick="markTableAsDoneOnline('${keys}')">ทำเสร็จแล้ว (รวมบิลโต๊ะ ${tableGroup.table})</button>`;
+                        doneButtonHtml = `<button class="done-btn" onclick="markOrderAsDoneOnline('${order.firebaseKey}')">เสร็จสิ้น (บิลนี้)</button>`;
                     } else {
-                        let indices = tableGroup.orders.map(o => o.originalIndex).join(',');
-                        doneButtonHtml = `<button class="done-btn" onclick="markTableAsDoneOffline('${indices}')">ทำเสร็จแล้ว (รวมบิลโต๊ะ ${tableGroup.table})</button>`;
+                        doneButtonHtml = `<button class="done-btn" onclick="markOrderAsDoneOffline(${index})">เสร็จสิ้น (บิลนี้)</button>`;
                     }
 
+                    // ปรับโครงสร้างยอดรวมให้สวยขึ้น
                     card.innerHTML = `
                         <div class="order-header">
                             <div>
-                                <div class="order-table">โต๊ะ: ${tableGroup.table}</div>
-                                <div style="font-size: 0.85rem; color: #94a3b8;">${tableGroup.orders.length} ออเดอร์ (รวมบิลแล้ว)</div>
+                                <div class="order-table">โต๊ะ: ${order.table || 'ไม่ระบุ'}</div>
                             </div>
-                            <div class="order-time">ล่าสุด: ${tableGroup.lastTime}</div>
+                            <div class="order-time">เวลา: ${order.time || '-'}</div>
                         </div>
                         <ul class="order-items">
                             ${itemsHtml}
                         </ul>
                         <div class="order-total">
-                            ยอดรวมโต๊ะนี้: ${tableGroup.total.toLocaleString()} ฿
+                            ยอดบิลนี้: <span>${(order.total || 0).toLocaleString()} ฿</span>
                         </div>
                         ${doneButtonHtml}
                     `;
@@ -341,9 +429,153 @@
             }
         }
 
-        // --- ระบบลบเมนูแบบอ้างอิงชื่อเมนูและชื่อโต๊ะ (แม่นยำ 100%) ---
-        function openDeleteModalByName(tableName, itemName) {
-            pendingDeleteData = { tableName: tableName, itemName: itemName };
+        // ----------------------------------------------------
+        // ฟีเจอร์รวมโต๊ะ/รวมบิล (แก้อัปเดตให้เลือกรวมบิลจากโต๊ะเดียวกันได้)
+        // ----------------------------------------------------
+        function openMergeModal() {
+            const container = document.getElementById('merge-checkboxes');
+            container.innerHTML = '';
+            
+            let orders = window.activeOrdersList || [];
+            // เปลี่ยนมาเช็คจำนวน "บิลทั้งหมด" แทนชื่อโต๊ะ
+            if (orders.length < 2) {
+                alert("ต้องมีอย่างน้อย 2 บิลในระบบเพื่อทำการรวมบิลครับ");
+                return;
+            }
+
+            // สร้าง Checkbox สำหรับ "ทุกบิล" เพื่อให้เลือกบิลจากโต๊ะเดียวกันได้
+            orders.forEach((o, index) => {
+                let tName = o.table || 'ไม่ระบุ';
+                let tTime = o.time || '-';
+                // ใช้ key หรือ index เป็นตัวอ้างอิงแทนชื่อโต๊ะ
+                let valueId = isOnlineMode ? o.firebaseKey : index;
+                
+                let label = document.createElement('label');
+                label.className = 'checkbox-label';
+                // แนบ data-tablename ไว้ใช้ตั้งชื่อบิลใหม่ตอนกดรวม
+                label.innerHTML = `
+                    <input type="checkbox" value="${valueId}" data-tablename="${tName}"> 
+                    <span>โต๊ะ: <b>${tName}</b> <small style="color:var(--text-muted); font-size:0.95rem; margin-left:5px;">(เวลา: ${tTime})</small></span>
+                `;
+                container.appendChild(label);
+            });
+
+            document.getElementById('merge-modal').style.display = 'flex';
+        }
+
+        function closeMergeModal() {
+            document.getElementById('merge-modal').style.display = 'none';
+        }
+
+        function executeMerge() {
+            const checkboxes = document.querySelectorAll('#merge-checkboxes input[type="checkbox"]:checked');
+            if (checkboxes.length < 2) {
+                alert("กรุณาเลือกอย่างน้อย 2 บิลเพื่อรวมเข้าด้วยกันครับ");
+                return;
+            }
+
+            // ดึง ID ที่โดนติ๊กเลือกมาเก็บไว้
+            let selectedIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            // ดึงชื่อโต๊ะของบิลที่โดนเลือกแบบ "ไม่ซ้ำกัน" มาตั้งชื่อบิลใหม่ (เช่น 56, 56 -> ได้ 56)
+            let selectedTableNames = Array.from(checkboxes).map(cb => cb.getAttribute('data-tablename'));
+            let uniqueTableNames = [...new Set(selectedTableNames)];
+
+            let orders = window.activeOrdersList || [];
+            
+            let keysToDelete = [];
+            let indicesToDelete = [];
+            let mergedItems = [];
+            let mergedTotal = 0;
+            
+            // นำบิลที่เลือกมารวมกัน (โดยอ้างอิงจาก ID บิล)
+            orders.forEach((o, index) => {
+                let orderId = isOnlineMode ? o.firebaseKey : index.toString();
+                
+                if (selectedIds.includes(orderId)) {
+                    if (isOnlineMode) keysToDelete.push(o.firebaseKey);
+                    else indicesToDelete.push(index);
+                    
+                    if (o.items) mergedItems = mergedItems.concat(o.items);
+                    mergedTotal += (Number(o.total) || 0);
+                }
+            });
+
+            // รวมเมนูซ้ำกันเป็นรายการเดียว
+            let consolidated = consolidateItems(mergedItems);
+            
+            let newOrder = {
+                table: uniqueTableNames.join(' + '), 
+                items: consolidated,
+                total: mergedTotal,
+                time: new Date().toLocaleTimeString('th-TH'),
+                date: new Date().toLocaleDateString('th-TH')
+            };
+
+            if (isOnlineMode) {
+                onlineDatabase.ref('restaurantOrders').push(newOrder).then(() => {
+                    let updates = {};
+                    keysToDelete.forEach(k => updates[k] = null);
+                    onlineDatabase.ref('restaurantOrders').update(updates);
+                });
+            } else {
+                let localOrders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
+                indicesToDelete.sort((a,b) => b-a).forEach(idx => localOrders.splice(idx, 1));
+                localOrders.push(newOrder);
+                localStorage.setItem('restaurantOrders', JSON.stringify(localOrders));
+                loadOfflineData();
+            }
+
+            closeMergeModal();
+        }
+
+        function consolidateItems(items) {
+            let map = {};
+            items.forEach(item => {
+                if(!map[item.name]) map[item.name] = {...item};
+                else map[item.name].quantity += item.quantity;
+            });
+            return Object.values(map);
+        }
+
+        // ----------------------------------------------------
+        // ระบบอัปเดตจำนวน + / - และลบเมนู
+        // ----------------------------------------------------
+        function updateQty(orderId, itemIndex, change, isOnline) {
+            if (isOnline) {
+                onlineDatabase.ref('restaurantOrders/' + orderId).once('value').then(snapshot => {
+                    let order = snapshot.val();
+                    if (order && order.items && order.items[itemIndex]) {
+                        let newQty = order.items[itemIndex].quantity + change;
+                        if (newQty > 0) {
+                            order.items[itemIndex].quantity = newQty;
+                            let newTotal = 0;
+                            order.items.forEach(i => newTotal += (i.price * i.quantity));
+                            onlineDatabase.ref('restaurantOrders/' + orderId).update({
+                                items: order.items, total: newTotal
+                            });
+                        }
+                    }
+                });
+            } else {
+                let orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
+                let order = orders[orderId];
+                if (order && order.items && order.items[itemIndex]) {
+                    let newQty = order.items[itemIndex].quantity + change;
+                    if (newQty > 0) {
+                        order.items[itemIndex].quantity = newQty;
+                        let newTotal = 0;
+                        order.items.forEach(i => newTotal += (i.price * i.quantity));
+                        order.total = newTotal;
+                        localStorage.setItem('restaurantOrders', JSON.stringify(orders));
+                        loadOfflineData();
+                    }
+                }
+            }
+        }
+
+        function openDeleteItemModal(orderId, itemIndex, isOnline) {
+            pendingDeleteData = { orderId, itemIndex, isOnline };
             document.getElementById('delete-item-modal').style.display = 'flex';
         }
 
@@ -354,135 +586,69 @@
 
         function executeDeleteItem() {
             if (!pendingDeleteData) return;
-            let tName = pendingDeleteData.tableName;
-            let iName = pendingDeleteData.itemName;
+            let { orderId, itemIndex, isOnline } = pendingDeleteData;
 
-            if (isOnlineMode) {
-                onlineDatabase.ref('restaurantOrders').once('value').then(snapshot => {
-                    let allOrders = snapshot.val();
-                    let updates = {};
-                    
-                    for (let key in allOrders) {
-                        let order = allOrders[key];
-                        let t = order.table || 'กลับบ้าน/ไม่ระบุ';
-                        // ค้นหาออเดอร์ของโต๊ะนี้ และมีเมนูชื่อนี้อยู่
-                        if (t === tName && order.items) {
-                            let newItems = order.items.filter(item => item.name !== iName);
-                            
-                            // คำนวณยอดเงินที่ต้องหักออก
-                            let removedTotal = 0;
-                            order.items.forEach(item => {
-                                if (item.name === iName) removedTotal += (item.price * item.quantity);
+            if (isOnline) {
+                onlineDatabase.ref('restaurantOrders/' + orderId).once('value').then(snapshot => {
+                    let order = snapshot.val();
+                    if (order && order.items) {
+                        order.items.splice(itemIndex, 1);
+                        if (order.items.length === 0) {
+                            onlineDatabase.ref('restaurantOrders/' + orderId).remove();
+                        } else {
+                            let newTotal = 0;
+                            order.items.forEach(i => newTotal += (i.price * i.quantity));
+                            onlineDatabase.ref('restaurantOrders/' + orderId).update({
+                                items: order.items, total: newTotal
                             });
-                            
-                            if (newItems.length === 0) {
-                                updates[key] = null; // ถ้าเมนูหมดออเดอร์แล้ว ให้ลบออเดอร์ทิ้งเลย
-                            } else if (removedTotal > 0) {
-                                order.items = newItems;
-                                order.total -= removedTotal;
-                                updates[key] = order; // อัปเดตออเดอร์ใหม่ที่หักเมนูออกแล้ว
-                            }
                         }
-                    }
-                    // ส่งข้อมูลอัปเดตกลับไปที่ Firebase ทีเดียว
-                    if (Object.keys(updates).length > 0) {
-                        onlineDatabase.ref('restaurantOrders').update(updates);
                     }
                 });
             } else {
                 let orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
-                let newOrders = [];
-                
-                orders.forEach(order => {
-                    let t = order.table || 'กลับบ้าน/ไม่ระบุ';
-                    if (t === tName && order.items) {
-                        let newItems = order.items.filter(item => item.name !== iName);
-                        
-                        let removedTotal = 0;
-                        order.items.forEach(item => {
-                            if (item.name === iName) removedTotal += (item.price * item.quantity);
-                        });
-                        
-                        if (newItems.length > 0) {
-                            order.items = newItems;
-                            order.total -= removedTotal;
-                            newOrders.push(order);
-                        }
+                let order = orders[orderId];
+                if (order && order.items) {
+                    order.items.splice(itemIndex, 1);
+                    if (order.items.length === 0) {
+                        orders.splice(orderId, 1);
                     } else {
-                        newOrders.push(order);
+                        let newTotal = 0;
+                        order.items.forEach(i => newTotal += (i.price * i.quantity));
+                        order.total = newTotal;
                     }
-                });
-                
-                localStorage.setItem('restaurantOrders', JSON.stringify(newOrders));
-                loadOfflineData();
+                    localStorage.setItem('restaurantOrders', JSON.stringify(orders));
+                    loadOfflineData();
+                }
             }
             closeDeleteItemModal();
         }
 
-        // --- ส่วนที่เหลือยังคงเหมือนเดิมทุกประการ ---
-        function markTableAsDoneOnline(keysStr) {
-            let keys = keysStr.split(',');
-            let promises = keys.map(key => onlineDatabase.ref('restaurantOrders/' + key).once('value'));
-            
-            Promise.all(promises).then(snapshots => {
-                let mergedOrder = null;
-                snapshots.forEach(snap => {
-                    let order = snap.val();
-                    if(order) {
-                        if(!mergedOrder) {
-                            mergedOrder = {...order}; 
-                        } else {
-                            mergedOrder.items = mergedOrder.items.concat(order.items || []);
-                            mergedOrder.total += order.total;
-                        }
-                    }
-                });
-                
-                if(mergedOrder) {
-                    mergedOrder.items = consolidateItems(mergedOrder.items);
-                    onlineDatabase.ref('restaurantHistory').push(mergedOrder).then(() => {
-                        keys.forEach(key => onlineDatabase.ref('restaurantOrders/' + key).remove());
+        // ----------------------------------------------------
+        // ระบบทำเสร็จและประวัติยอดขาย
+        // ----------------------------------------------------
+        function markOrderAsDoneOnline(key) {
+            onlineDatabase.ref('restaurantOrders/' + key).once('value').then(snapshot => {
+                let order = snapshot.val();
+                if(order) {
+                    onlineDatabase.ref('restaurantHistory').push(order).then(() => {
+                        onlineDatabase.ref('restaurantOrders/' + key).remove();
                     });
                 }
             });
         }
 
-        function markTableAsDoneOffline(indicesStr) {
-            let indices = indicesStr.split(',').map(Number).sort((a,b) => b-a);
+        function markOrderAsDoneOffline(index) {
             let orders = JSON.parse(localStorage.getItem('restaurantOrders')) || [];
             let history = JSON.parse(localStorage.getItem('restaurantHistory')) || [];
+            let order = orders[index];
             
-            let mergedOrder = null;
-            indicesStr.split(',').map(Number).forEach(idx => {
-                let order = orders[idx];
-                if(order) {
-                    if(!mergedOrder) {
-                        mergedOrder = JSON.parse(JSON.stringify(order));
-                    } else {
-                        if(order.items) mergedOrder.items = mergedOrder.items.concat(order.items);
-                        mergedOrder.total += order.total;
-                    }
-                }
-            });
-
-            if(mergedOrder) {
-                mergedOrder.items = consolidateItems(mergedOrder.items); 
-                history.push(mergedOrder);
-                indices.forEach(idx => orders.splice(idx, 1));
-                
+            if(order) {
+                history.push(order);
+                orders.splice(index, 1);
                 localStorage.setItem('restaurantOrders', JSON.stringify(orders));
                 localStorage.setItem('restaurantHistory', JSON.stringify(history));
                 loadOfflineData();
             }
-        }
-
-        function consolidateItems(items) {
-            let map = {};
-            items.forEach(item => {
-                if(!map[item.name]) map[item.name] = {...item};
-                else map[item.name].quantity += item.quantity;
-            });
-            return Object.values(map);
         }
 
         function calculateTotals(history) {
